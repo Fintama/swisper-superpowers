@@ -32,6 +32,7 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `setup-delivery-program` | `init-programme.sh` | The programme state directory is created, not assumed. Without it the monitoring and messaging tools abort on a missing lane map. |
 | `setup-delivery-program` | `seven tests a lane must pass` | Lanes are derived from the architecture, not invented from job titles. |
 | `creating-screen-mocks` | `CHIEF EXPERIENCE OFFICER` | DESIGN.md and component docs are direction, not reference — ignoring them overrides a person. |
+| `creating-screen-mocks` | `MORE THAN ONE PACKAGE` | A design system is usually several packages; finding one and designing from it invents gaps that do not exist. Count the filesystem, not the registry. |
 | `creating-screen-mocks` | `data-testid` | The join key the render gate needs. Without it nothing downstream can be compared. |
 
 ## Skills we substantially extended

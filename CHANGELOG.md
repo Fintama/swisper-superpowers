@@ -5,6 +5,18 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-08-28
+
+### Fixed
+- **`creating-screen-mocks` assumed a design system is one package.** Phase 2 now
+  enumerates org-scoped dependencies from the consuming app's `package.json`,
+  because tokens, general components, product-specific components and icons
+  normally ship separately — and stopping at the tokens package (which has no
+  components at all) is the common failure. Also: **count the filesystem, not the
+  registry table.** Measured on Fintama's system, the registry documented 36
+  components while 44 shipped. Adds a step to enumerate the app's own
+  `domain/`/`blocks/` components, which are usually the real graft target.
+
 ## [1.0.1] - 2026-08-28
 
 Found by running the published package against a programme that is not Foundry.

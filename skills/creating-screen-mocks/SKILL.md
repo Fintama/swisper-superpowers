@@ -69,6 +69,54 @@ to have, never something to settle silently inside one mock.
 - [ ] **Enumerate what exists** before concluding something is missing. A mature
       design system ships more than you remember, sub-components included.
 
+### 🔴 A DESIGN SYSTEM IS USUALLY MORE THAN ONE PACKAGE
+
+**Finding one package and designing from it is the most common way this phase
+fails.** The tokens live in one package, the components in another, the
+product-specific components in a third, and the icons in a fourth. Compose from
+one of them and you will "discover" gaps that do not exist, and invent things
+that already ship.
+
+**Enumerate from the CONSUMING APP, not from a directory you happened to open:**
+
+```bash
+# the authoritative list of what this product may compose with
+cat <app>/package.json | grep -E '"@<org>/'
+```
+
+Every org-scoped dependency is a candidate. Then, for each one, count what is
+actually in it:
+
+```bash
+ls -d node_modules/@<org>/<pkg>/src/components/*/ | wc -l
+```
+
+Typical shape, and all four are in scope:
+
+| package | holds | trap |
+|---|---|---|
+| `…/design-system` | tokens, theme | **has no components** — finding it and stopping is the classic error |
+| `…/ui` | the general component library | the biggest one; read its per-component `.md` |
+| `…/<product>-ui` | product-specific components (chat, editor…) | often undocumented, and often exactly what you need |
+| `…/icons` | icons | reach for it before drawing an SVG |
+
+🔴 **THE REGISTRY IN `DESIGN.md` CAN BE STALE — COUNT THE FILESYSTEM, NOT THE
+TABLE.** A component table is written by hand and drifts. *Measured on Fintama's
+system: the registry documented 36 components while 44 shipped — eight, including
+`avatar` and `popover`, existed and were invisible to anyone trusting the doc.*
+The doc tells you **how to choose**; the filesystem tells you **what exists**.
+When they disagree, the filesystem wins and the difference is a finding worth
+raising.
+
+### Also enumerate the app's OWN components
+
+Beyond the shared packages, the product almost always has local components —
+`src/domain/`, `src/blocks/`, `src/features/`. **These are precedent, and they are
+frequently the real graft target.** If the product already renders the object you
+are designing for (an email, an event, an invoice), that rendering is the
+established language, and a mock that invents a second one for the same object
+is asking users to learn it twice.
+
 **The decision order, when two rules conflict:** accessibility → tokens →
 existing component contracts → documented patterns → the design system doc →
 local product context. **Higher always wins.**
