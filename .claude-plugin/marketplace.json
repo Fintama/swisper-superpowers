@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "swisper-superpowers",
+  "description": "Swisper's engineering discipline for Claude Code",
+  "owner": {
+    "name": "Swisper Engineering",
+    "url": "https://github.com/Fintama"
+  },
+  "plugins": [
+    {
+      "name": "swisper-superpowers",
+      "source": "./",
+      "description": "Engineering discipline as Claude Code skills: idea to agreed spec, spec to sequenced plan, screen mocks that are the specification, TDD, systematic debugging, and the tooling to run a multi-lane delivery programme with agents"
+    }
+  ]
+}

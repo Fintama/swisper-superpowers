@@ -1,0 +1,25 @@
+{
+  "name": "swisper-superpowers",
+  "description": "Engineering discipline as Claude Code skills: idea to agreed spec, spec to sequenced plan, screen mocks that are the specification, TDD, systematic debugging, and the tooling to run a multi-lane delivery programme with agents",
+  "version": "1.0.0",
+  "author": {
+    "name": "Swisper Engineering"
+  },
+  "homepage": "https://github.com/Fintama/swisper-superpowers",
+  "repository": "https://github.com/Fintama/swisper-superpowers",
+  "license": "Apache-2.0",
+  "keywords": [
+    "skills",
+    "tdd",
+    "test-driven-development",
+    "debugging",
+    "specs",
+    "planning",
+    "code-review",
+    "design-system",
+    "mocks",
+    "delivery-program",
+    "subagents",
+    "swisper"
+  ]
+}
