@@ -17,12 +17,19 @@ import json, os, re, sys
 
 import sys as _s, pathlib as _p
 _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
-from program_root import program_dir as _pd, program_root as _pr
+from program_root import program_dir as _pd, program_root as _pr, program_transcripts as _pt
 ROOT = _pd()          # C2: was dirname(__file__)
-PROJ = os.path.expanduser("~/.claude/projects/-Users-heiko-Projects-swisper-foundry")
+PROJ = _pt()          # C2/HC-2: was a hard-coded, USER-specific absolute path.
+                      # On anyone else's machine it named a directory that does not
+                      # exist, so every lane read as "no transcript" and the check
+                      # reported clean while being incapable of reporting anything else.
 WINDOW = int(sys.argv[1]) if len(sys.argv) > 1 else 1_000_000
 
-lanes = re.findall(r'\("(WS\d-\d[^"]*)",\s*"([a-f0-9-]{36})"', open(f"{ROOT}/ws-pulse.py").read())
+# Strip comments BEFORE matching: the protocol tells the PM to comment a retired
+# row rather than delete it, so an uncommented parse counts retired sessions as
+# live. reap-ghosts.sh has always done this; this file did not.
+_src = re.sub(r"#.*", "", open(f"{ROOT}/ws-pulse.py").read())
+lanes = re.findall(r'\("(WS\d-\d[^"]*)",\s*"([a-f0-9-]{36})"', _src)
 
 print(f"CONTEXT — measured from transcripts, window {WINDOW:,}")
 alerts = []

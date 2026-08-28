@@ -192,8 +192,20 @@ and lose a day to it.
 
 - [ ] Write **`program.yaml`** at the programme root — shape in
       `docs/program-yaml.md`. It becomes the **sole owner** of programme identity.
-- [ ] Verify: `python3 scripts/program-yaml-check.py`. **A missing field is an
-      error naming the field and the lane**, never a silent default.
+- [ ] Verify: `python3 "$CLAUDE_PLUGIN_ROOT/scripts/program-yaml-check.py"`. **A
+      missing field is an error naming the field and the lane**, never a silent
+      default.
+- [ ] **Create the programme state directory** — without it the monitoring and
+      messaging tools abort, because the lane map they read does not exist yet:
+
+      bash "$CLAUDE_PLUGIN_ROOT/scripts/init-programme.sh"
+
+      It seeds `.handover/` with an empty lane map, its import dependencies, the
+      outbox and the inbox directory, then **runs the seeded map to prove it
+      works**. Idempotent, and it never overwrites an existing roster. The
+      stateless tools (`msg.py`, `stall-check.py`, `reap-ghosts.sh`,
+      `board-server.py`) stay in the plugin and are always invoked from
+      `$CLAUDE_PLUGIN_ROOT/scripts/` — only the lane map is programme-owned.
 - [ ] **Scaffold the board** — use `update-program-board` for the structure. Do
       not invent a layout here.
 - [ ] **Register the PM's recurring check.** Write its prompt yourself — there is

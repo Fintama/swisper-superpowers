@@ -1,7 +1,7 @@
 {
   "name": "swisper-superpowers",
   "description": "Engineering discipline as Claude Code skills: idea to agreed spec, spec to sequenced plan, screen mocks that are the specification, TDD, systematic debugging, and the tooling to run a multi-lane delivery programme with agents",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Swisper Engineering"
   },

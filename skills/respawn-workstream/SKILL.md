@@ -48,9 +48,13 @@ Find its session id: newest `*.jsonl` in `~/.claude/projects/<project>/` whose f
 ## 4b. REAP THE OLD PROCESS (mandatory — not optional cleanup)
 A decommissioned session survives as its own `claude --resume=<id>` process if it is open in a VS Code panel; closing the window does not kill it, and it will keep working (observed twice on 2026-07-27, both forked a lane). After the successor is seated and the pulse map remapped:
 ```bash
-bash .handover/reap-ghosts.sh          # report
-bash .handover/reap-ghosts.sh --kill   # terminate retired sessions only
+bash "$CLAUDE_PLUGIN_ROOT/scripts/reap-ghosts.sh"          # report
+bash "$CLAUDE_PLUGIN_ROOT/scripts/reap-ghosts.sh" --kill   # terminate retired sessions only
 ```
+⚠ **Report first, every time.** It reads the lane map to tell live from retired,
+so an incomplete or freshly-seeded map makes every real session look like a
+ghost. Read the report and recognise the sessions in it before you ever add
+`--kill`.
 It refuses to touch any id present in the `ws-pulse.py` map, so remap FIRST or it will decline to reap. Verify the report then shows only LIVE lanes. A reaped session may still appear in VS Code until the view refreshes — inert, cosmetic only.
 
 ## 5. Decommission the old session

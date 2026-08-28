@@ -5,6 +5,39 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-28
+
+Found by running the published package against a programme that is not Foundry.
+Everything below was green on the machine it was written on, and broken
+everywhere else.
+
+### Fixed
+- **The programme state directory was never created.** `setup-delivery-program`
+  did not mention `.handover/` at all, so `reap-ghosts.sh`, `stall-check.py` and
+  `ctx-check.py` aborted on a missing lane map. New
+  **`scripts/init-programme.sh`** seeds it, is idempotent, never overwrites an
+  existing roster, and **runs the seeded map to prove it works** rather than
+  reporting on file existence.
+- **`ctx-check.py` and `stall-check.py` had a hard-coded personal transcript
+  path** — missed by the portability pass that fixed `ws-pulse.py`. On any other
+  machine they read a directory that does not exist, so every lane looked
+  silent-with-no-transcript and both reported clean while being structurally
+  incapable of reporting anything else. Now use `program_transcripts()`.
+- **Both parsed the lane map without stripping comments**, so a row commented out
+  per the retirement protocol still counted as a live lane. `reap-ghosts.sh` had
+  always stripped them; these two had not.
+- **The seeded lane map could not import its own dependencies.**
+  `init-programme.sh` now places `program_root.py` and `program_yaml.py` beside
+  it — the failure appeared only after the map had been edited.
+- **Skills invoked stateless tools from `.handover/`**, the pre-plugin location.
+  They now use `$CLAUDE_PLUGIN_ROOT/scripts/`. Both protocol docs gained a header
+  stating which tools live where and why the lane map is the exception.
+- `gemini-tools.md` referenced `spec-reviewer-prompt.md`, deleted with the
+  per-task spec review.
+- `respawn-workstream` now warns that `reap-ghosts.sh` must be run in report mode
+  first: it reads the lane map to tell live from retired, so an incomplete map
+  makes every real session look like a ghost.
+
 ## [1.0.0] - 2026-08-28
 
 First public release. The repository moved from a private Fintama repo to a

@@ -25,7 +25,7 @@ When a skill says to dispatch a named agent type, use `@generalist` with the ful
 | Skill instruction | Gemini CLI equivalent |
 |-------------------|----------------------|
 | `Task tool (superpowers:implementer)` | `@generalist` with the filled `implementer-prompt.md` template |
-| `Task tool (superpowers:spec-reviewer)` | `@generalist` with the filled `spec-reviewer-prompt.md` template |
+| `Task tool (spec review)` | *(retired — the per-task spec review and its `spec-reviewer-prompt.md` were removed; spec fidelity is proved by AC-named tests and the PR-boundary review)* |
 | `Task tool (superpowers:code-reviewer)` | `@code-reviewer` (bundled agent) or `@generalist` with the filled review prompt |
 | `Task tool (superpowers:code-quality-reviewer)` | `@generalist` with the filled `code-quality-reviewer-prompt.md` template |
 | `Task tool (general-purpose)` with inline prompt | `@generalist` with your inline prompt |

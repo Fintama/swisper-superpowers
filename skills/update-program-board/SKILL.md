@@ -7,7 +7,7 @@ description: PM duty — keep Mission Control (:8794) current by hand — status
 
 **Heiko's single surface.** Hand-maintained by the PM — written like a document, not emitted by a generator (that was tried and deliberately removed: adequate-looking tables are worse than a page written with care).
 
-Served by `.handover/board-server.py` (static files + the `/decide` write-back). If :8794 is down: `nohup python3 .handover/board-server.py > /tmp/board-server.log 2>&1 &`. Files live in `docs/superpowers/specs/2026-07-25-generic-agent-and-pdlc-overview-mockups/` — **inside the docs submodule: commit-only, never push; publishing is Heiko-gated.**
+Served by `board-server.py` (static files + the `/decide` write-back). If :8794 is down: `nohup python3 "$CLAUDE_PLUGIN_ROOT/scripts/board-server.py" > /tmp/board-server.log 2>&1 &`. Files live in `docs/superpowers/specs/2026-07-25-generic-agent-and-pdlc-overview-mockups/` — **inside the docs submodule: commit-only, never push; publishing is Heiko-gated.**
 
 ## The structure (keep it)
 

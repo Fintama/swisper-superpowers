@@ -1,5 +1,20 @@
 # PROTOCOL v3 — hybrid bus: message-driven where hosted, polled where panelled (Heiko, 2026-07-27)
 
+> ⚠ **WHERE THE SCRIPTS LIVE — read this before copying any command below.** This
+> document was written when the tooling sat in the programme's own `.handover/`,
+> and its commands still say `.handover/<script>`. Since the tooling became a
+> plugin the split is:
+>
+> | | where it lives | how to run it |
+> |---|---|---|
+> | **Stateless tools** — `msg.py`, `stall-check.py`, `ctx-check.py`, `reap-ghosts.sh`, `pm-outbox-read.sh`, `board-server.py`, `quiet.sh`, `ws-pulse-delta.py` | the plugin | `python3 "$CLAUDE_PLUGIN_ROOT/scripts/<name>"` |
+> | **The lane map** — `ws-pulse.py` | the **programme**, in `.handover/` | `python3 .handover/ws-pulse.py` |
+>
+> The lane map is programme data: the PM edits it on every succession, so it
+> cannot live in a cache that updates overwrite. Create it once with
+> `bash "$CLAUDE_PLUGIN_ROOT/scripts/init-programme.sh"`.
+
+
 > **v3 CHANGE (supersedes the polling rules below for hosted lanes).** Since tmux hosting is proven, the bus is now **hybrid**:
 > - **PM → tmux-hosted lane: DIRECT.** `python3 .handover/msg.py WS<N> "text"` types the message straight in; it arrives as a prompt and wakes the session (queues if mid-turn). **Hosted lanes DELETE their poll cron** — no empty-poll cost at all. Every message is still mirrored to the inbox file for audit + successor history.
 > - **PM → panel lane: POLLED** (unchanged v2.1 rules below) until that lane's next respawn makes it hosted.

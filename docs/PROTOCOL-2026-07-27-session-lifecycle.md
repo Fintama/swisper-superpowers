@@ -1,5 +1,20 @@
 # PROTOCOL — session lifecycle: naming · context package · registration · decommission
 
+> ⚠ **WHERE THE SCRIPTS LIVE — read this before copying any command below.** This
+> document was written when the tooling sat in the programme's own `.handover/`,
+> and its commands still say `.handover/<script>`. Since the tooling became a
+> plugin the split is:
+>
+> | | where it lives | how to run it |
+> |---|---|---|
+> | **Stateless tools** — `msg.py`, `stall-check.py`, `ctx-check.py`, `reap-ghosts.sh`, `pm-outbox-read.sh`, `board-server.py`, `quiet.sh`, `ws-pulse-delta.py` | the plugin | `python3 "$CLAUDE_PLUGIN_ROOT/scripts/<name>"` |
+> | **The lane map** — `ws-pulse.py` | the **programme**, in `.handover/` | `python3 .handover/ws-pulse.py` |
+>
+> The lane map is programme data: the PM edits it on every succession, so it
+> cannot live in a cache that updates overwrite. Create it once with
+> `bash "$CLAUDE_PLUGIN_ROOT/scripts/init-programme.sh"`.
+
+
 **Heiko-directed, 2026-07-27. Applies to EVERY program session — the five workstreams AND the PM. Companion to `PROTOCOL-2026-07-27-pm-mailboxes.md` (v2.1, the poll-bus). Proven end-to-end on 2026-07-27 with WS4-3, the first PM-spawned successor.**
 
 ---

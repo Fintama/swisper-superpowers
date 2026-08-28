@@ -29,6 +29,7 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `running-a-workstream` | `Mission Goals` | A lane judges its own design against the programme's goals, and may not add one. |
 | `running-a-programme` | `writing-exec-summaries` | The PM seat — nothing briefed it before. Reports in the agreed shape. |
 | `writing-exec-summaries` | `Retrospective` | The five-section report, made portable. It lived only in one machine's project memory. |
+| `setup-delivery-program` | `init-programme.sh` | The programme state directory is created, not assumed. Without it the monitoring and messaging tools abort on a missing lane map. |
 | `setup-delivery-program` | `seven tests a lane must pass` | Lanes are derived from the architecture, not invented from job titles. |
 | `creating-screen-mocks` | `CHIEF EXPERIENCE OFFICER` | DESIGN.md and component docs are direction, not reference — ignoring them overrides a person. |
 | `creating-screen-mocks` | `data-testid` | The join key the render gate needs. Without it nothing downstream can be compared. |
