@@ -5,6 +5,31 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-08-28
+
+### Fixed
+- **The review loop's click-to-select only reached components under
+  `/src/screens/`.** `sourceStamp` stamped nothing else, so anything factored
+  into `src/ui/` — the pills, tags and avatars a reviewer actually points at —
+  carried no source location. Clicking one walked up to the nearest stamped
+  ancestor, usually a layout wrapper or a dialog frame, and the readout named
+  that instead. It does not read as "selection is broken"; it reads as
+  "selection is coarse", which is why it survived a session of use.
+  `sourceStamp` now takes `roots` (default: the whole of `/src/`) and `exclude`
+  (default: the review loop itself), and skips `node_modules`. Measured on a
+  live mock: a component file went from 0 stamps to 19, and the selection chain
+  from 3 levels to the full depth.
+
+- **Browser automation silently overwrote the reviewer's selection.**
+  `current-selection.json` is written on every click, and a scripted
+  `element.click()` is indistinguishable from a human one to a DOM listener. Any
+  agent driving the page to verify its own work destroyed what the reviewer had
+  just pointed at — between them clicking and anyone reading the file — and the
+  file still looked perfectly valid afterwards. The click handler now ignores
+  events where `isTrusted` is false, which no synthetic event can forge.
+  Controlled in both directions: scripted clicks leave the file byte-identical,
+  a real click still writes it.
+
 ## [1.0.2] - 2026-08-28
 
 ### Fixed

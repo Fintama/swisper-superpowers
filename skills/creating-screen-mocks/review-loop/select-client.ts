@@ -84,6 +84,13 @@ function render(chain: { entry: Entry; el: Element }[], d: number) {
 }
 
 addEventListener("click", (e) => {
+  /* ONLY REAL CLICKS. A scripted `el.click()` — browser automation verifying
+     the mock, a test driving it — produces an untrusted event, and until this
+     guard existed every one of those OVERWROTE current-selection.json. The
+     reviewer's selection could be destroyed between them clicking and anyone
+     reading it, silently, and the file would still look perfectly valid.
+     `isTrusted` is false for any synthetic event and cannot be forged. */
+  if (!e.isTrusted) return;
   const hit = (e.target as HTMLElement).closest("[data-source]");
   if (!hit) return;
   e.preventDefault();

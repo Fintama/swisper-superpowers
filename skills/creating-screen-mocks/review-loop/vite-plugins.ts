@@ -36,18 +36,35 @@ import type { Plugin } from "vite";
  * That is a real, measured limitation and it is not fixable here; wrap those
  * few components explicitly if you need them selectable.
  */
-export function sourceStamp(screensDir = "/src/screens/"): Plugin {
+/**
+ * `roots` defaults to the whole of `/src/`, NOT just `/src/screens/`.
+ *
+ * Measured: with screens-only, any component factored into `src/ui/` is
+ * unstamped, so clicking a pill inside a dialog resolved up to the whole
+ * dialog — three levels for a screen with ten. It reads as "selection is
+ * broken" when it is really "selection is coarse". Anything the project
+ * authors should be stampable; only node_modules and the review loop itself
+ * are excluded.
+ */
+export function sourceStamp(roots: string[] = ["/src/"], exclude: string[] = ["/review-loop/"]): Plugin {
   return {
     name: "source-stamp",
     enforce: "pre",
     apply: "serve",
     transform(code, id) {
-      if (!id.includes(screensDir) || !/\.[jt]sx$/.test(id)) return null;
+      if (id.includes("node_modules")) return null;
+      if (exclude.some((x) => id.includes(x))) return null;
+      if (!roots.some((r) => id.includes(r)) || !/\.[jt]sx$/.test(id)) return null;
       const rel = relative(process.cwd(), id.split("?")[0]);
       const out = code.split("\n").map((line, i) => {
         if (line.includes("data-source")) return line;
         return line.replace(
-          /<([a-zA-Z][a-zA-Z0-9.]*)(?=[\s/>])/g,
+          // The lookbehind is load-bearing: in JSX a `<` follows whitespace,
+          // `(`, `{`, `>` or a line start, while in a TypeScript generic it
+          // follows an identifier -- `useState<Filter>`, `Record<K, V>`. Without
+          // it the stamper writes `useState<Filter data-source="...">` and the
+          // file no longer parses. Position, not shape, is what separates them.
+          /(?<![A-Za-z0-9_$])<([a-zA-Z][a-zA-Z0-9.]*)(?=[\s/>])/g,
           (_m, tag) => `<${tag} data-source="${rel}:${i + 1}"`,
         );
       });
