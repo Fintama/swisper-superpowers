@@ -332,6 +332,31 @@ its happy state, and the other four get invented by an implementer.
       specification.
 - [ ] **Run it locally and show it in a browser.** Do not hand over a file path or
       a screenshot when the point is the journey.
+- [ ] 🔴 **TELL THE REVIEWER HOW TO DRIVE IT, IN THE CHAT, EVERY TIME.** Paste the
+      block below with the mock's URL. Not a link to this skill, not "the usual
+      controls" — the actual keys, in the message that hands over the mock.
+
+      **Why this is a checklist item and not politeness:** the controls are
+      invisible. A reviewer who does not know about ⌥ will plain-click, get the
+      prototype's own behaviour, and reasonably conclude that pointing does not
+      work — which is exactly what happened on 2026-08-29, twice, once because
+      the reviewer reached for ⌘ and once because nobody had said ⌥ existed. The
+      readout only appears *after* a successful selection, so it cannot teach the
+      gesture that produces it.
+
+      ```
+      Mock: http://localhost:<port>/
+
+        plain click        use the prototype — it behaves like the real thing
+        ⌥ Option + click   SELECT an element (the prototype does not act)
+        ⌥ + click again    drill one level in, same as Figma
+        ⌥ + Shift + click  add to the selection
+        S                  toggle select-mode (plain click selects)
+        N                  leave a note on the current selection
+
+      Point at anything and tell me what you want changed — I read the
+      selection, so "make this bigger" is unambiguous.
+      ```
 
 ---
 

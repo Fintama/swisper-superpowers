@@ -139,6 +139,9 @@ function renderMode() {
 let selectMode = false;
 
 addEventListener("keydown", (e) => {
+  /* Same guard as the click handler, for the same reason — automation must not
+     be able to flip a reviewer's mode out from under them. */
+  if (!e.isTrusted) return;
   if (e.key.toLowerCase() !== "s") return;
   const t = (e.target as HTMLElement)?.tagName;
   if (t === "INPUT" || t === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
@@ -212,6 +215,12 @@ addEventListener("click", (e) => {
 }, { capture: true });
 
 addEventListener("keydown", (e) => {
+  /* 🔴 isTrusted HERE TOO. The click handler has always had it; these two did
+     not, so a scripted keypress could append notes a human never wrote — into
+     the one file this loop treats as a DURABLE record rather than current
+     state. An invented note is worse than an overwritten selection: the
+     selection is replaced on the next click, a note persists and gets acted on. */
+  if (!e.isTrusted) return;
   if (e.key.toLowerCase() !== "n" || !current.length) return;
   const target = (e.target as HTMLElement)?.tagName;
   if (target === "INPUT" || target === "TEXTAREA") return;
