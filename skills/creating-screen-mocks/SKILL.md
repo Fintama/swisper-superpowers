@@ -165,20 +165,81 @@ Show both, get the direction, then build the rest to it. **Do not build the whol
 set before the direction is settled** — you would be paying twice for every
 screen.
 
-⚠ **The variants need the workspace and the review loop already wired** (Phase 5)
-— they are the first thing anyone clicks on, and the direction conversation is
-exactly where pointing beats describing. Stand the workspace up first, build two
-variants in it, then continue.
+⚠ **The variants need the workspace and the review loop already wired** — they
+are the first thing anyone clicks on, and the direction conversation is exactly
+where pointing beats describing. So **do Phase 5 now**: `init-workspace.sh`, then
+`verify-review-loop.mjs` exits 0, then build two variants in it, then continue.
 
 ---
 
-## Phase 5 · Build the prototype
+## Phase 5 · Stand the workspace up — and PROVE it is reviewable
 
-**Where:** a self-contained workspace, one per feature, **outside the application
-source** so it is excluded from app builds and app CI. Follow the convention the
-repo already uses — `ls` for an existing mocks directory and match it, rather
-than inventing a second location. *(Foundry's own repo uses `mocks/<slug>/`; an
-onboarded product gets `design/mocks/<slug>/` on its feature branch.)*
+🔴 **THIS PHASE COMES BEFORE ANY SCREEN, AND IT ENDS WITH A SCRIPT SAYING YES.**
+Not because setup is interesting, but because the thing that makes a mock a mock
+— the human being able to point at an element and have you read it — is
+invisible when it is missing. The screens still render. The screenshots still
+look right. Everything passes. See `BASELINE-2026-08-29.md`: an agent shipped a
+mock with no review loop, cleared every verification item in this skill, and the
+human's first words were *"why doesn't point to click work?"*
+
+### Scaffold it — do not hand-write it
+
+```bash
+./init-workspace.sh <workspace-dir> <app-dir>
+# e.g. ./init-workspace.sh design/mocks/checkout frontendV2
+```
+
+**Where:** one workspace per feature, **outside the application source** so it is
+excluded from app builds and app CI. Follow the convention the repo already uses
+— `ls` for an existing mocks directory and match it rather than inventing a
+second location. *(Foundry's own repo uses `mocks/<slug>/`; an onboarded product
+gets `design/mocks/<slug>/` on its feature branch.)*
+
+The script writes the vite config with **`sourceStamp()` first, then React, then
+`selectSink()`**, an entry file that already imports `select-client`, a tsconfig
+that excludes the vendored loop (with the reason inline), and a `node_modules`
+symlink. **An agent cannot forget a step it never performs** — which is the only
+fix that has ever worked here, because the previous one was a three-line
+instruction at the bottom of the longest phase and it was read and skipped.
+
+🔴 **`<app-dir>` MUST BE THE WORKTREE THAT ACTUALLY HAS THE FEATURE.** In a repo
+with several worktrees, the one you are standing in may be many commits behind
+and simply not contain the code. The script fails fast if `node_modules` or
+`src` is missing; it cannot tell you the branch is stale. Check that yourself —
+in the measured run the workspace was built against a worktree 30+ commits
+behind, every design-system import resolved to nothing, and it surfaced as a
+Vite error long after the screens were written.
+
+### 🔴 Never `npm install` in a mock workspace — symlink instead
+
+The skill cannot ship `node_modules`: hundreds of MB, platform- and
+arch-specific binaries, and it would have to match the host app's React/Vite
+versions or the mock composes against a **different design system than the
+product**. Borrowing the app's is not a shortcut, it is the only way the mock
+typechecks against the version that actually ships.
+
+An install is also actively dangerous where a repo shares one `node_modules`
+across git worktrees by symlink — it can rewrite the tree every other worktree
+points at.
+
+### Then prove it, before you build anything
+
+```bash
+npx vite --port <found-port> --strictPort      # never a fixed port
+node verify-review-loop.mjs http://localhost:<port> <workspace-dir>
+```
+
+Three measurements, exit 0 or the mock is not reviewable: the entry imports the
+client, the served module carries stamps, and `POST /__select` persists.
+
+🔴 **DO NOT TRY TO CONFIRM IT WITH A SCRIPTED CLICK — IT WILL DO NOTHING AND
+LOOK BROKEN.** `select-client.ts` ignores untrusted events on purpose, so
+automation cannot overwrite the reviewer's selection between them clicking and
+you reading it. A synthetic `el.click()` is *correctly* ignored. Agents hit this,
+conclude the loop is broken, and go debugging working code. Only a human's real
+click exercises that path, and that is the design.
+
+## Phase 6 · Build the prototype
 
 ### Import straight from the design system
 
@@ -244,23 +305,14 @@ navigation between screens. Where a state matters (empty, loading, error, full,
 degraded), make it reachable — a screen with only its happy state specifies only
 its happy state, and the other four get invented by an implementer.
 
-### Wire the review loop
-
-Copy `review-loop/vite-plugins.ts` into the workspace and register both plugins;
-import `review-loop/select-client.ts` once from the entry file. Read their
-headers — they carry the limits.
-
-```ts
-plugins: [sourceStamp(), react(), selectSink()]   // sourceStamp MUST be first
-```
-
-That is the whole setup. It gives the reviewer click-to-select with a live
-readout, and gives you an exact `file:line` for whatever they point at.
-
 ---
 
-## Phase 6 · Verify, then present
+## Phase 7 · Verify, then present
 
+- [ ] 🔴 **`verify-review-loop.mjs` exits 0.** First, not last — every other item
+      below passed on a mock the human could not click, which is how the measured
+      failure got all the way to presentation. If you changed `vite.config.ts`
+      after Phase 5, run it again.
 - [ ] **It typechecks against the *installed* design system version.**
 - [ ] 🔴 **Positive-control the typecheck.** Inject a prop the DS must reject
       (a plausible one from a framework it is not — e.g. a size value it does not
@@ -277,7 +329,7 @@ readout, and gives you an exact `file:line` for whatever they point at.
 
 ---
 
-## Phase 7 · The review loop — how feedback actually arrives
+## Phase 8 · The review loop — how feedback actually arrives
 
 Once the mock is up, **the reviewer points and you edit.** They click a component
 in their own browser and then tell you what they want in words.
@@ -334,6 +386,14 @@ is least convenient.
 
 ## Red flags
 
+- **Your `vite.config.ts` has no `sourceStamp()` / `selectSink()`** — the mock is
+  a picture, and the reviewer cannot point at anything
+- **You hand-wrote the workspace** instead of running `init-workspace.sh`
+- **You presented without `verify-review-loop.mjs` exiting 0**
+- **You ran `npm install` in a mock workspace** — symlink the app's `node_modules`
+- **You tried to verify click-to-select by scripting a click**, saw nothing
+  happen, and started debugging the loop — it ignores untrusted events by design
+- **You pointed `<app-dir>` at a worktree that does not contain the feature**
 - You chose a component before reading its `.md`
 - You started designing without reading `DESIGN.md`
 - You wrote a hex colour or a pixel value
