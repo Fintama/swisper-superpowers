@@ -15,7 +15,7 @@
  * ⚠ DEV ONLY. Neither plugin should run in a production build — `sourceStamp`
  * adds attributes to markup and `selectSink` writes to disk.
  */
-import { writeFileSync } from "node:fs";
+import { writeFileSync, rmSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { Plugin } from "vite";
 
@@ -130,6 +130,16 @@ export function selectSink(outDir = process.cwd()): Plugin {
         });
 
       server.middlewares.use("/__select", async (req, res) => {
+        /* 🔴 DELETE REMOVES THE FILE — the reviewer said "I'm done pointing"
+           (Esc, or leaving select-mode) and a leftover selection is a wrong
+           answer waiting to be given. No file reads as "I don't know which one",
+           which is the honest state; a stale one reads as a confident answer to
+           a question nobody asked. `force` so a clear on an empty slate is not
+           an error. */
+        if (req.method === "DELETE") {
+          rmSync(join(outDir, "current-selection.json"), { force: true });
+          res.statusCode = 204; return res.end();
+        }
         if (req.method !== "POST") { res.statusCode = 405; return res.end(); }
         writeFileSync(join(outDir, "current-selection.json"), await read(req));
         res.statusCode = 204; res.end();

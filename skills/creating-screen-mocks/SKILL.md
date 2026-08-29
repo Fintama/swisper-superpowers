@@ -304,6 +304,29 @@ A landing page listing:
 browser's back button, or retype a URL, stops exploring — and you lose the
 feedback the prototype existed to collect.
 
+### 🔴 A THIN MARK IS UNSELECTABLE — give it a hit area
+
+A connector, a gridline, a 1px divider, a sparkline, an axis rule: an SVG
+`<line>` has a **zero-height bounding box**, so hit-testing runs on the stroke
+alone. At 1.25px that asks the reviewer for sub-pixel aim. Measured 2026-08-29:
+a human tried repeatedly to select a chart connector, could not, and reasonably
+assumed they were aiming badly.
+
+Give it a transparent fat sibling and make **that** the target:
+
+```tsx
+<>
+  <line …  stroke="transparent" strokeWidth={14} data-testid="…" />
+  <line …  className="stroke-ba-neutral" strokeWidth={1.25} pointerEvents="none" />
+</>
+```
+
+⚠ **A FRAGMENT, NOT A `<g>`.** The first attempt wrapped both in a `<g>` — which
+added a level to the drill chain, so the mark became reachable and simultaneously
+one click further away. Trading a hit-test problem for a navigation problem is
+not a fix. Measure the depth after: the mark should be the LAST level, so an
+extra click wraps rather than overshoots.
+
 ### Make it genuinely clickable
 
 The reviewer must be able to **walk the journey**, not stare at stills. Wire the

@@ -11,6 +11,7 @@
  *   Alt + Shift + click    add to the selection ("make ALL of these …")
  *   S                      toggle select-mode — plain click selects
  *   N                      leave a note on the current selection
+ *   Esc                    clear the selection (S also clears on exit)
  *
  * PROGRESSIVE DRILL-IN is still the interaction: Alt-click again on the same
  * spot and watch it narrow. The readout in the corner names the current level,
@@ -61,7 +62,15 @@ function chainOf(el: Element): { entry: Entry; el: Element }[] {
         entry: {
           level: i, source,
           tag: e.tagName.toLowerCase(),
-          className: (e as HTMLElement).className || null,
+          /* 🔴 `getAttribute("class")`, NEVER `.className`. On an SVG element
+             `.className` is an SVGAnimatedString OBJECT, not a string — so the
+             readout printed `line.[object` and the JSON carried `"className":{}`.
+             Measured 2026-08-29 the moment a reviewer selected a chart
+             connector. Every mock with a chart, an icon or any inline SVG hits
+             this, and it degrades exactly where the element is hardest to
+             identify by tag alone. `getAttribute` returns a plain string for
+             both HTML and SVG. */
+          className: e.getAttribute("class") || null,
           // Several JSX elements can sit on ONE line and share an anchor.
           // `nth` is what separates them, and it is not optional.
           nth: peers.indexOf(e) + 1,
@@ -89,6 +98,26 @@ function render(chain: { entry: Entry; el: Element }[], d: number) {
     `<b>${name}</b><br><span style="color:#9db8e8">${source}</span><br>` +
     `<span style="color:#7a8594">level ${d + 1} of ${chain.length} — Alt-click again to go deeper · N to note</span>` +
     modeLine();
+}
+
+/**
+ * Drop the selection — visual, in-memory, AND on disk.
+ *
+ * 🔴 THE FILE GOES TOO, AND THAT IS THE POINT. A highlight left over an
+ * interactive prototype is clutter; a STALE current-selection.json is a wrong
+ * answer waiting to happen. The reviewer exits select-mode, uses the prototype
+ * for ten minutes, then says "make this bigger" — and the session reads an
+ * element they stopped pointing at half an hour ago, confidently. No file is an
+ * honest "I don't know which one"; a stale file is a confident wrong one.
+ */
+function clearSelection() {
+  document.querySelectorAll("[data-mock-hl]").forEach((n) => {
+    n.removeAttribute("data-mock-hl");
+    (n as HTMLElement).style.outline = "";
+  });
+  leaf = null; depth = 0; current = [];
+  readout.innerHTML = modeLine().replace(/^<br>/, "");
+  fetch("/__select", { method: "DELETE" }).catch(() => {});
 }
 
 /* 🔴 THE MODE MUST BE ON SCREEN AT ALL TIMES. A modifier is stateless and needs
@@ -146,7 +175,17 @@ addEventListener("keydown", (e) => {
   const t = (e.target as HTMLElement)?.tagName;
   if (t === "INPUT" || t === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
   selectMode = !selectMode;
-  renderMode();
+  /* Leaving select-mode means "done pointing, back to using it" — so the
+     selection goes with the mode. Entering it only changes the mode. */
+  if (!selectMode) clearSelection(); else renderMode();
+});
+
+/* Escape clears too, which is the only way out when selecting with ⌥ rather
+   than in select-mode — otherwise the highlight can only be replaced, never
+   dismissed. */
+addEventListener("keydown", (e) => {
+  if (!e.isTrusted || e.key !== "Escape" || !current.length) return;
+  clearSelection();
 });
 
 addEventListener("click", (e) => {
