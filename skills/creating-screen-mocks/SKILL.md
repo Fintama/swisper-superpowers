@@ -233,11 +233,17 @@ Three measurements, exit 0 or the mock is not reviewable: the entry imports the
 client, the served module carries stamps, and `POST /__select` persists.
 
 🔴 **DO NOT TRY TO CONFIRM IT WITH A SCRIPTED CLICK — IT WILL DO NOTHING AND
-LOOK BROKEN.** `select-client.ts` ignores untrusted events on purpose, so
-automation cannot overwrite the reviewer's selection between them clicking and
-you reading it. A synthetic `el.click()` is *correctly* ignored. Agents hit this,
-conclude the loop is broken, and go debugging working code. Only a human's real
-click exercises that path, and that is the design.
+LOOK BROKEN.** `select-client.ts` opens its click handler with
+
+```ts
+if (!e.isTrusted) return;   // scripted clicks must not clobber the reviewer's selection
+```
+
+so automation cannot overwrite `current-selection.json` between the human
+clicking and you reading it. A synthetic `el.click()` is *correctly* ignored.
+Agents hit this, conclude the loop is broken, and go debugging working code —
+it cost the measured run real time. Only a human's real click exercises that
+path, and that is the design, not a gap.
 
 ## Phase 6 · Build the prototype
 

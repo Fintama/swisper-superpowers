@@ -37,7 +37,34 @@ while IFS=$'\t' read -r skill marker; do
     if ! /usr/bin/grep -qF -- "$marker" "$f"; then
         echo "LOST            $skill — '$marker' is no longer in $f"
         missing=$((missing + 1))
+        continue
     fi
+    # 🔴 A MARKER THAT NAMES A FILE MUST ALSO FIND THE FILE.
+    #
+    # Measured 2026-08-29: two markers were added naming shipped scripts
+    # (`init-workspace.sh`, `verify-review-loop.mjs`). Both passed on the SKILL.md
+    # grep alone — and would have kept passing if a merge deleted the scripts and
+    # left the prose, because the prose is what mentions them. That is this
+    # ledger's own stated failure mode: a check that "lies in the safe-looking
+    # direction". A skill whose tooling is gone but whose instructions still tell
+    # an agent to run it is worse than one that never had it.
+    # 🔴 SEARCH BY BASENAME, ANYWHERE IN THE FORK — NEVER `skills/$skill/$marker`.
+    #
+    # The flat-path version was written first and produced THREE FALSE FAILURES
+    # on its first run: `plan-check.sh` lives in `skills/writing-plans/scripts/`,
+    # `init-programme.sh` at the repo root, and `render-gate.mjs` is named by
+    # `subagent-driven-development` but shipped under `creating-screen-mocks/`.
+    # Tooling is routinely referenced from a skill that does not host it, and a
+    # check that cries wolf trains everyone to ignore it — the same false-red
+    # failure this fork warns about elsewhere, committed one file later.
+    case "$marker" in
+        *.sh|*.mjs|*.js|*.ts|*.py)
+            if [ -z "$(/usr/bin/find . -name "$marker" -not -path './.git/*' -print -quit)" ]; then
+                echo "LOST FILE       $skill — SKILL.md still names '$marker' but no such file exists in the fork"
+                missing=$((missing + 1))
+            fi
+            ;;
+    esac
 # The row shape is EXACT: `| \`skill\` | \`marker\` | prose |`. Requiring field 3 to be
 # exactly " | " is what keeps prose tables out — an NF>=5 test also matched the
 # "rows deliberately NOT in this table" section, whose cells contain backticked

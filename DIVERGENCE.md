@@ -34,6 +34,9 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `creating-screen-mocks` | `CHIEF EXPERIENCE OFFICER` | DESIGN.md and component docs are direction, not reference — ignoring them overrides a person. |
 | `creating-screen-mocks` | `MORE THAN ONE PACKAGE` | A design system is usually several packages; finding one and designing from it invents gaps that do not exist. Count the filesystem, not the registry. |
 | `creating-screen-mocks` | `data-testid` | The join key the render gate needs. Without it nothing downstream can be compared. |
+| `creating-screen-mocks` | `init-workspace.sh` | The workspace is scaffolded with the review loop already wired. Measured: an agent that hand-wrote it shipped a mock nobody could click. An agent cannot forget a step it never performs. |
+| `creating-screen-mocks` | `verify-review-loop.mjs` | The gate that can fail on a missing review loop. Every other verification item passed on an unreviewable mock, so the verify phase was blind to the one omission that matters. |
+| `creating-screen-mocks` | `isTrusted` | `select-client` ignores scripted clicks so automation cannot clobber the reviewer's selection — and an agent that tries one sees nothing and debugs working code. Documented where it is met, not only inside the file. |
 
 ## Skills we substantially extended
 
