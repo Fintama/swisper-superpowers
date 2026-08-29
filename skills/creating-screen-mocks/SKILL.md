@@ -337,8 +337,29 @@ its happy state, and the other four get invented by an implementer.
 
 ## Phase 8 · The review loop — how feedback actually arrives
 
-Once the mock is up, **the reviewer points and you edit.** They click a component
-in their own browser and then tell you what they want in words.
+Once the mock is up, **the reviewer points and you edit.** They Alt-click a
+component in their own browser and then tell you what they want in words.
+
+🔴 **A PLAIN CLICK USES THE PROTOTYPE; ⌥ ALT-CLICK SELECTS.** Tell the reviewer
+this when you hand the mock over — it is the one thing they must know.
+
+| | |
+|---|---|
+| plain click | the mock behaves like the real thing |
+| **⌥ Alt + click** | select · again on the same spot drills one level in |
+| ⌥ + Shift + click | add to the selection |
+| **S** | toggle select-mode, where a plain click selects |
+| **N** | leave a note on the current selection |
+
+Until 1.2.0 an unmodified click did both, and `preventDefault()` looked like it
+prevented the second — it never could. The listener is on `window`; React
+attaches below it, so `onClick` had already run. Pointing at a tab to say "make
+this wider" also switched the tab. The fix is the capture phase plus
+`stopPropagation`; the modifier only decides which clicks get intercepted.
+
+⚠ **⌘ is the key a Mac reviewer reaches for first** — measured. It cannot be the
+selector (it opens links in new tabs), so the readout says so instead of
+silently behaving like a plain click.
 
 **Read `current-selection.json` before acting on any "this" / "here" / "that
 one".** Never guess which element they meant — the file says.

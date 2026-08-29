@@ -3,17 +3,24 @@
  *
  *   import "./select-client";
  *
- * PROGRESSIVE DRILL-IN, which is the interaction that survived review:
- *   click 1 on a spot  -> the outermost meaningful container
- *   click 2 same spot  -> one level in
- *   click 3 same spot  -> one level further …wrapping at the leaf
+ * 🔴 A PLAIN CLICK USES THE PROTOTYPE. ALT/OPTION-CLICK SELECTS.
  *
- * Chosen over a modifier key because it needs nothing taught: click again,
- * watch it narrow. The readout in the corner names the current level so the
- * reviewer knows what "this" will mean before they go and say it.
+ *   plain click            the mock behaves like the real thing
+ *   Alt + click            select (the prototype does NOT act)
+ *   Alt + click again      one level in …wrapping at the leaf
+ *   Alt + Shift + click    add to the selection ("make ALL of these …")
+ *   S                      toggle select-mode — plain click selects
+ *   N                      leave a note on the current selection
  *
- * Shift-click adds to the selection ("make ALL of these secondary").
- * Press N with something selected to leave a note on it.
+ * PROGRESSIVE DRILL-IN is still the interaction: Alt-click again on the same
+ * spot and watch it narrow. The readout in the corner names the current level,
+ * and the mode, so the reviewer knows what "this" will mean before they say it.
+ *
+ * ⚠ The drill-in was originally chosen *because* it needed no modifier. That
+ * reasoning held only while the mock was a picture. A prototype is interactive,
+ * so an unmodified click already means "use me", and taking it for selection
+ * made every act of pointing also press the thing being pointed at. See the
+ * SELECTING vs USING block below for why it was invisible for so long.
  */
 type Entry = {
   level: number; source: string; tag: string; className: string | null;
@@ -80,8 +87,64 @@ function render(chain: { entry: Entry; el: Element }[], d: number) {
   const name = tag + (className ? "." + String(className).split(/\s+/)[0] : "");
   readout.innerHTML =
     `<b>${name}</b><br><span style="color:#9db8e8">${source}</span><br>` +
-    `<span style="color:#7a8594">level ${d + 1} of ${chain.length} — click again to go deeper · N to note</span>`;
+    `<span style="color:#7a8594">level ${d + 1} of ${chain.length} — Alt-click again to go deeper · N to note</span>` +
+    modeLine();
 }
+
+/* 🔴 THE MODE MUST BE ON SCREEN AT ALL TIMES. A modifier is stateless and needs
+   no indicator, but select-mode is a MODE, and an unlabelled mode is how someone
+   clicks a button expecting it to work and gets a selection instead — then
+   reports the prototype as broken. */
+function modeLine() {
+  return selectMode
+    ? `<br><span style="color:#ffd479">SELECT MODE — plain click selects · S to exit</span>`
+    : `<br><span style="color:#7a8594">Alt-click to select · S for select-mode</span>`;
+}
+
+function renderMode() {
+  if (!readout.innerHTML) { readout.innerHTML = modeLine().replace(/^<br>/, ""); return; }
+  readout.innerHTML = readout.innerHTML.replace(
+    /<br><span style="color:(#ffd479|#7a8594)">(SELECT MODE|Alt-click to select)[^<]*<\/span>$/,
+    modeLine(),
+  );
+}
+
+/* ══ SELECTING vs USING THE PROTOTYPE ══════════════════════════════════════
+ *
+ * 🔴 A PROTOTYPE IS INTERACTIVE, SO A CLICK MEANS TWO THINGS AND WE MUST PICK.
+ *
+ * Until 1.2.0 every review click ALSO drove the prototype, and `preventDefault()`
+ * looked like it was preventing that. It was not. This listener sits on `window`
+ * in the BUBBLE phase; React attaches its handlers at the root container, which
+ * is below window — so React's `onClick` had already run by the time we got the
+ * event. `preventDefault()` only cancels the BROWSER's default action (following
+ * a link, submitting a form, ticking a checkbox); it cannot un-run a handler.
+ * Pointing at a tab to say "make this wider" therefore also switched the tab.
+ *
+ * The fix is the CAPTURE phase — window's capture listener runs before the root
+ * container's — plus `stopPropagation`, so a selection click never reaches React
+ * at all.
+ *
+ *   plain click              use the prototype. It behaves like the real thing.
+ *   ALT/OPTION + click       select. The prototype does NOT act.
+ *   ALT + SHIFT + click      add to the selection ("make ALL of these …").
+ *   press S                  toggle select-mode, where a PLAIN click selects —
+ *                            for an extended review where holding Alt is tiring.
+ *
+ * 🔴 ALT, NOT SHIFT, AND THAT IS NOT A PREFERENCE. Shift was already taken by
+ * add-to-selection, and shift-click also extends the browser's text selection.
+ * Cmd-click opens links in a new tab and Ctrl-click is a right-click on macOS.
+ * Alt is the only modifier free of a conflict, and it is what design tools use.
+ */
+let selectMode = false;
+
+addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "s") return;
+  const t = (e.target as HTMLElement)?.tagName;
+  if (t === "INPUT" || t === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+  selectMode = !selectMode;
+  renderMode();
+});
 
 addEventListener("click", (e) => {
   /* ONLY REAL CLICKS. A scripted `el.click()` — browser automation verifying
@@ -91,15 +154,45 @@ addEventListener("click", (e) => {
      reading it, silently, and the file would still look perfectly valid.
      `isTrusted` is false for any synthetic event and cannot be forged. */
   if (!e.isTrusted) return;
+
+  /* 🔴 THE DEFAULT IS "USE THE PROTOTYPE". Returning here leaves the event
+     completely untouched, so the mock behaves exactly as a user would find it.
+     A review tool that silently changes how the thing under review responds is
+     measuring something other than the thing under review. */
+  /* 🔴 ⌘ IS THE WRONG KEY AND SAYING SO BEATS DOING NOTHING. Measured: a
+     reviewer reached for Command — entirely natural on a Mac — got a plain
+     click, and reported the tool as broken. Cmd cannot BE the selector (it
+     opens links in new tabs), but a silent no-op is the worst possible answer.
+     Naming the mistake costs one line and replaced a whole debugging round. */
+  if (e.metaKey && !e.altKey && !selectMode) {
+    const near = (e.target as HTMLElement).closest?.("[data-source]");
+    if (near) {
+      readout.innerHTML =
+        `<span style="color:#ffd479">that was ⌘ — hold ⌥ (Option) to select</span>` +
+        `<br><span style="color:#7a8594">⌥ is immediately left of ⌘ · or press S for select-mode</span>`;
+    }
+    return;
+  }
+
+  if (!e.altKey && !selectMode) return;
+
   const hit = (e.target as HTMLElement).closest("[data-source]");
   if (!hit) return;
+
+  /* 🔴 BOTH, AND IN THE CAPTURE PHASE. `stopPropagation` is what keeps React
+     from acting; `preventDefault` is what keeps the browser from following a
+     link or submitting a form. Neither alone is enough, and the earlier version
+     had only the second. */
+  e.stopPropagation();
   e.preventDefault();
+
   if (hit !== leaf) { leaf = hit; depth = 0; } else { depth += 1; }
   const chain = chainOf(hit);
   if (!chain.length) return;
   if (depth >= chain.length) depth = 0;
   render(chain, depth);
   const selected = chain[depth].entry;
+  /* Alt+SHIFT adds; Alt alone replaces. In select-mode plain Shift adds. */
   current = e.shiftKey ? [...current, selected] : [selected];
   fetch("/__select", {
     method: "POST",
@@ -111,7 +204,12 @@ addEventListener("click", (e) => {
       chain: chain.map((c) => c.entry),
     }),
   });
-});
+  /* 🔴 CAPTURE — window's capture listener runs BEFORE the React root's, which
+     is what makes stopPropagation above able to keep React from ever seeing the
+     event. In the bubble phase React has already handled it and nothing can
+     undo that. This single option is the difference between "the prototype also
+     acted" and "it did not". */
+}, { capture: true });
 
 addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() !== "n" || !current.length) return;

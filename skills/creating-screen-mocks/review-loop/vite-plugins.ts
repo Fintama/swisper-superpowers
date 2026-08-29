@@ -88,6 +88,39 @@ export function selectSink(outDir = process.cwd()): Plugin {
   return {
     name: "select-sink",
     apply: "serve",
+    /* ═══════════════════════════════════════════════════════════════════════
+     * 🔴 THE FILES THIS PLUGIN WRITES MUST BE INVISIBLE TO VITE'S WATCHER.
+     * ═══════════════════════════════════════════════════════════════════════
+     *
+     * Measured 2026-08-29, and it made selection look broken to a human:
+     *
+     *     2:03:31 PM [vite] (client) page reload current-selection.json
+     *     2:03:32 PM [vite] (client) page reload current-selection.json
+     *
+     * `current-selection.json` is written INTO the Vite root, so the watcher
+     * saw a file change and full-reloaded the page — wiping the outline, the
+     * readout and the prototype's own React state. The reviewer clicked, saw it
+     * highlight, and watched it vanish a moment later. THE ACT OF RECORDING THE
+     * SELECTION DESTROYED THE SELECTION.
+     *
+     * It is not a scaffold's job to remember this: the plugin that causes the
+     * writes is the plugin that excludes them. Anything else is an instruction
+     * that gets skipped — which is how this whole review loop went unwired in
+     * the first place.
+     *
+     * ⚠ Do NOT "fix" this by writing the files outside the root instead. The
+     * session reads them by plain file access next to the workspace, which is
+     * what makes the loop need no browser automation; moving them buys nothing
+     * and breaks that. */
+    config() {
+      return {
+        server: {
+          watch: {
+            ignored: ["**/current-selection.json", "**/review-notes.jsonl"],
+          },
+        },
+      };
+    },
     configureServer(server) {
       const read = (req: any) =>
         new Promise<string>((res) => {
