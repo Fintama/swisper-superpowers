@@ -90,6 +90,56 @@ Three failure modes, all observed, all mine:
 
 **Update it in the same breath as the event** — not "later", not at the next wake-up. Merge a PR → the PR table and trunk change in the same turn. Succeed a session → the roster changes in the same turn. A lane surfaces something needing him → a full card, then and there.
 
+## 🔴 A DECISION CHANNEL THAT ONLY WRITES A FILE IS HALF A CHANNEL
+
+**Added 2026-08-30, Helvetiq, after Heiko clicked three decisions and then had to ask
+"can you check whether you can see it?" — and took a screenshot to be sure.** He was right:
+*"otherwise the board is only half useful."*
+
+Both halves below are mandatory when you stand a board up. Neither is optional polish.
+
+### 1 · A click must WAKE the PM, not just land in a file
+
+The write-back appends to the outbox and stops. **If nothing is watching that file, the decision sits
+there until the PM happens to look** — which, from Heiko's side, is indistinguishable from the button
+being broken. Arm a watch **in the same turn you start the server**:
+
+```
+Monitor(
+  command: tail -n 0 -f <programme>/.handover/outbox-to-pm.md | grep --line-buffered "via board",
+  description: "<name>'s board decisions",
+  persistent: true)
+```
+
+⚠ **`tail -n 0`** — without it every historical line replays as a fresh event on arming.
+⚠ **`--line-buffered`** — without it grep holds matches in its buffer and the watch is silently dead.
+
+**Verify the watch, do not assume it:** click a button and confirm the notification arrives. A watch
+that cannot fire looks exactly like a quiet afternoon.
+
+### 2 · The board must show the ANSWER and the ACKNOWLEDGEMENT, on load
+
+A static page loses the answer on reload, so Heiko cannot tell what he has already ruled on — and he
+never learns whether the PM acted. Serve a `/state` endpoint returning **`answers`** (parsed back out
+of the outbox, last-wins per decision) and **`acks`** (`board/acks.json`, written by the PM *after*
+acting: `{"<decision id>": {"at": "...", "did": "..."}}`), and render per card:
+
+| state | shown as |
+|---|---|
+| unanswered | buttons only |
+| answered, PM has not acted | 🟡 **amber** — *"You answered X · <when>. The PM has not confirmed acting on it yet."* |
+| PM acted | ✅ **green** — the answer, plus **what the PM actually did about it** |
+
+Poll `/state` every ~20s so an acknowledgement reaches a page that is already open.
+
+🔴 **The `did` field is the point, and it is not a receipt.** *"Relayed to WS3 with three conditions:
+it must write the key production actually reads…"* tells Heiko his decision had consequences and what
+they were. *"Acknowledged"* tells him nothing and is worse than silence, because it looks like closure.
+
+**The general rule this is an instance of: a channel needs a return path, or the sender cannot
+distinguish "delivered" from "broken".** Same defect class as a guard that cannot fail — the success
+and failure states are indistinguishable from where the user stands.
+
 ## Rules
 - **No prose inside inline JS strings — buttons pass data, not text (hard rule, 27 Jul).** `onclick="pick("Approve B — don't offer it")"` is dead markup: the inner double quotes end the attribute, and an apostrophe kills the single-quote variant the same way. Two of five decision pages shipped with silently dead Approve buttons this way — the failure mode is *no error, nothing happens*, discovered only when Heiko clicks. Write the label ONCE, in an HTML attribute (entities handle quoting there), and read it back:
   ```html
@@ -100,6 +150,8 @@ Three failure modes, all observed, all mine:
 - **Never leave a resolved item on the board.** Same discipline as the runbook: a dead warning on a fixed defect is worse than no warning.
 - **Notes carry evidence, not adjectives** ("verified across 5 boots", not "should be fine").
 - **Recommendations are honest** — say when reasoning runs ahead of a workstream's detail, and offer "wait for the brief" as a real option.
-- The write-back appends to `.handover/outbox-to-pm.md`, which the PM wake-up already reads — **do not invent a second channel.**
+- The write-back appends to `.handover/outbox-to-pm.md` — **do not invent a second channel.** ⚠ But see
+  **A click must WAKE the PM** below: "the PM wake-up already reads it" is only true if a wake-up
+  actually exists.
 - **Buttons everywhere Heiko must answer.** Use the data-attribute handler (`decideEl(this)` reading `data-id`/`data-answer`) — never prose inside the JS call. Every card ends in buttons; a card he cannot answer from is unfinished.
 - After editing, verify ALL of: `curl -s -o /dev/null -w "%{http_code}" http://localhost:8794/` · `grep -nE 'onclick="[a-z]+\("' *.html` returns nothing · the roster names match `ws-pulse.py` exactly · the trunk sha matches `git log origin/main` · every open PR on the board is still open and every merged one is gone.

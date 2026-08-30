@@ -5,6 +5,46 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-30
+
+### Added
+- **`update-program-board` — "A decision channel that only writes a file is half a
+  channel."** Measured the hard way: Heiko clicked three decisions on the board,
+  could not tell whether any had been seen, and had to ask — then took a screenshot
+  to be sure. *"Otherwise the board is only half useful."* He was right, and the
+  skill had asserted otherwise: it said the write-back lands in the outbox *"which
+  the PM wake-up already reads"*. That was true of the programme it was written for
+  and **false of the next one**, where nothing was watching the file at all. A
+  mechanism assumed rather than checked.
+
+  Two halves are now mandatory when a board is stood up, and neither is polish:
+
+  - **The wake path.** A click must WAKE the PM, not wait to be noticed. Arm a
+    `Monitor` on the outbox **in the same turn the server starts** — with
+    `tail -n 0` (or every historical line replays as a fresh event) and
+    `--line-buffered` (or grep holds matches in its buffer and the watch is silently
+    dead). **Verify it by clicking a button** — a watch that cannot fire looks
+    exactly like a quiet afternoon.
+  - **The return path.** A `/state` endpoint returning `answers` (parsed back out of
+    the outbox, last-wins) and `acks` (`board/acks.json`, written by the PM *after*
+    acting), so each card renders one of three states: unanswered · 🟡 answered but
+    unacknowledged · ✅ acted, **with what the PM actually did about it**. The `did`
+    field is the point and it is not a receipt — *"Acknowledged"* is worse than
+    silence, because it looks like closure.
+
+  The general rule this is an instance of: **a channel needs a return path, or the
+  sender cannot distinguish "delivered" from "broken"** — the same defect class as a
+  guard that cannot fail.
+
+### Fixed
+- **`scripts/board-server.py` served the wrong directory and bound a hardcoded
+  port.** Its web root was a path from one specific programme's docs submodule, so
+  on any other programme it served that programme's mocks or nothing. It now prefers
+  `.handover/board` and falls back to the legacy location.
+- **Ports are global to the machine, not per-programme.** The port was hardcoded to
+  8794; measured 2026-08-30 with two programmes on one laptop, the second simply
+  fails to bind. It now reads `board.port` from `program.yaml`.
+
 ## [1.3.0] - 2026-08-30
 
 ### Changed
