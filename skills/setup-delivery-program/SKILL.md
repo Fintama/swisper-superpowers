@@ -228,14 +228,52 @@ For **each** lane, in order:
       **Method belongs in `running-a-workstream`, which the doc points at** — do
       not restate it. A brief that mixes state and method rots at the first
       re-scope and nobody can tell which half aged.
-- [ ] **Spawn and name the session.** `bash scripts/spawn-lane.sh WS<n> "<Lane>" 1`
-      — it pins the model, strips the inherited child-session variable that
-      silently disables transcript writing, and names the tab. **Read its header
-      before first use**; every guard in it cost someone an afternoon.
-- [ ] **Point it at the spawn doc and at `running-a-workstream`** in its first
-      message. Nothing else — it reads the rest itself.
-- [ ] **Wait for it to report live** with its branch and rig URL before spawning
-      the next. A lane that failed to boot is cheaper to find one at a time.
+- [ ] **Create the lane's worktree.**
+- [ ] **Hand the human the lane's opening card and stop.** You do not spawn the
+      lane; they do, in a VS Code tab. Emit exactly this, one card per lane:
+
+      ```
+      ── WS<n> · <Lane title> ─────────────────────────────
+      1. Open a VS Code window on:  <absolute worktree path>
+      2. In that window: Cmd-Esc (or ✻ in the status bar) for a Claude tab
+      3. Paste, in order, pressing Enter after each:
+           /model opus
+           /rename WS<n>-1 <Lane title>
+           <one-line briefing: read SPAWN-<date>-WS<n>-session-1.md, then use running-a-workstream>
+      ```
+
+      🔴 **The window must be opened ON THE WORKTREE.** A Claude tab always runs
+      in its window's folder — there is no way to point it elsewhere, and a tab
+      opened in the wrong window silently works the wrong tree. Two lanes sharing
+      one `.git/index` produce silent false greens, not conflicts. **One window
+      per lane worktree**; the tabs live inside it.
+- [ ] **`/model` and `/rename` are the human's first two lines, not optional.**
+      A tab inherits the last-saved default model — that is how five lanes once
+      came up on the wrong one — and nothing renames it. Both are lost unless
+      typed.
+- [ ] **Wait for the lane to report live** with its branch and rig URL before
+      handing over the next card. One at a time: a lane that failed to boot is
+      cheaper to find alone.
+- [ ] **Capture its session id yourself, and verify where it landed** — do not
+      ask the human to read it out:
+
+      ```bash
+      claude agents --json | python3 -c '
+      import json,sys
+      for s in json.load(sys.stdin):
+          print(s.get("name"), s.get("sessionId"), s.get("cwd"))'
+      ```
+
+      **Assert the `cwd` is the lane worktree before recording anything.** The id
+      goes in the monitoring map; a lane in the wrong tree is stopped, not fixed.
+- [ ] **Verify the model from the transcript** — a typed `/model` is a claim
+      until the running session agrees:
+      `tail -40 ~/.claude/projects/<slug>/<id>.jsonl | grep -o '"model":"[^"]*"' | tail -1`
+
+**Automated alternative (no human, no tab):** `scripts/spawn-lane.sh` still
+stands up a lane headlessly in tmux, pinning the model and asserting the
+worktree itself. Use it when nobody is at the keyboard; the cards above are the
+default because tabs are what the human actually watches.
 
 ---
 

@@ -24,7 +24,7 @@ Pattern: identity line ("You are WS<N> — <lane>, session <k+1>") · read-first
 
 **Autonomous spawn (PM-hosted, proven 2026-07-27):**
 ```bash
-bash scripts/spawn-lane.sh WS<n> "<Lane title>" <k+1>
+bash scripts/spawn-lane.sh WS<n> "<Lane title>" <k+1> <worktree-path>
 ```
 ⚠ **Use the script, do not hand-roll the tmux commands.** It is the SAME
 implementation `setup-delivery-program` uses for a first spawn, and it carries
@@ -33,6 +33,14 @@ every guard that cost an afternoon: the model pin, stripping the inherited
 picker entry, no monitoring, no handover next time), separate type/Enter calls,
 the tmux-not-screen requirement, and a refusal to fork a lane that is already
 live. Read its header once before first use.
+
+🔴 **Pass the SAME worktree the outgoing session held** — the successor must
+land where its predecessor's work is. The worktree is an argument as of
+2026-08-30; before that the script had no `-c` and the successor started in the
+PM's cwd, so a respawn could quietly move a lane out of its own worktree and
+into whatever directory the PM happened to be standing in. The script asserts
+the landing from the running session and exits 76 if it is wrong, having sent
+the lane nothing.
 
 **Still yours after the script returns — it deliberately does not do these:**
 - **Send the briefing** pointing at the SPAWN doc and at `running-a-workstream`. Type and Enter as separate `send-keys` calls.

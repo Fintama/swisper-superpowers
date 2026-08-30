@@ -5,6 +5,43 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-30
+
+### Changed
+- **`setup-delivery-program` §6 no longer spawns lanes — it hands the human an
+  opening card per lane.** Lanes are watched in VS Code tabs, and a Claude tab
+  can only be opened from inside VS Code: there is no URI, command or CLI that
+  creates one with a chosen working directory. The card carries the worktree to
+  open a window on and the three lines to paste — `/model`, `/rename`, then the
+  one-line briefing. `scripts/spawn-lane.sh` remains as the no-human
+  alternative, and is still the only route that pins the model itself.
+- **One VS Code window per lane worktree is now stated as a rule.** A Claude tab
+  always runs in its own window's folder. Measured 2026-08-30: opening a session
+  by id from a window rooted elsewhere does not fail — it silently creates a
+  *new, empty* session in the wrong directory. Two lanes sharing one
+  `.git/index` produce silent false greens, not conflicts.
+
+### Fixed
+- **`spawn-lane.sh` never set the lane's working directory.** It had no `-c`, so
+  every lane started in *the PM's* cwd and reached its worktree only if it read
+  and obeyed a sentence in its spawn document — the same class as a subagent
+  inheriting the session cwd. The worktree is now a required argument, validated
+  before boot (exists · is a worktree **root**, since git's upward discovery
+  reports the enclosing repo and looks entirely healthy · not already occupied
+  by a live session) and **asserted from the running session afterwards**,
+  before the lane is typed at, so a mis-placed lane receives nothing. Controlled
+  by mutating `-c` to a wrong directory: exit 76, expected vs actual named.
+- **The readiness check could not observe readiness.** It grepped the pane for
+  `│`, `>` or `Welcome`; Claude Code 2.1.251 draws `❯` and `─` and says no
+  "Welcome", so none of the three ever matched. Every spawn burned the full 60s,
+  exited 75 "no prompt", and left a healthy un-renamed, un-briefed lane running
+  in tmux — a failure report for something that did not fail, and an orphan
+  generator. Readiness is now taken from the session registry, which the session
+  writes itself and which does not change shape between releases, with the pane
+  scrape kept only as the second half and widened to cover both TUIs.
+- **`spawn-lane.sh` now reports the lane's session id**, so the monitoring map
+  no longer has to be filled in by hand.
+
 ## [1.0.3] - 2026-08-28
 
 ### Fixed
