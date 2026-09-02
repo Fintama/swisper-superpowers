@@ -28,7 +28,10 @@ alone** — that is the bar, and it is what each section is for.
 6. **Merges today.**
 7. **Per-lane cards** — busy or idle, what is done, what is planned.
    **Clicking a lane card shows that lane's plan and its PR list.**
-8. **Outstanding decisions** — see the decision rules below.
+8. **Outstanding decisions** — see the decision rules below. 🔴 **Only the OPEN ones appear here.
+   Answered decisions live in the `Decided` tab and move there by themselves** — see
+   *"Answered decisions must leave the queue by themselves"* below. Sections 1-9 are the layout of
+   the **`Open` tab**; the other two tabs carry history, not status.
 9. **Key improvements from retrospectives.**
 
 ⚠ **Sections 1-6 are FACTS and go stale silently.** They are hand-maintained by
@@ -132,6 +135,67 @@ acting: `{"<decision id>": {"at": "...", "did": "..."}}`), and render per card:
 
 Poll `/state` every ~20s so an acknowledgement reaches a page that is already open.
 
+### 3 · 🔴 ANSWERED DECISIONS MUST LEAVE THE QUEUE BY THEMSELVES — tabs, not tidying
+
+**Ruled by Heiko 2026-09-02**, after the Swisper Platform board reached fifteen decision cards of
+which eleven were already answered: *"move all past decisions into a decisions tab so they don't
+pollute the main board."*
+
+**Three tabs, in this order — `Open` · `Decided` · `Record`.** `Open` carries the lanes and the
+decisions still waiting. `Decided` carries everything already ruled on, with its status line.
+`Record` carries the settled rulings nobody may re-litigate.
+
+🔴 **The placement is DERIVED FROM `/state`, never hand-filed.** This is the whole point and it is
+the difference between this rule and the old one. Rule 150 has always said *"never leave a resolved
+item on the board"* — and boards kept silting up anyway, because obeying it meant a human
+remembering to move a card on the same day they were busy answering it. **Moving cards by hand is
+the failing instrument; derive the placement instead** (R-k: change the instrument, not the
+discipline). A card answered at 12:17 leaves the Open tab on the next 20-second tick with nobody
+editing the file.
+
+Author **every** decision card in the Open panel. On each refresh:
+
+```js
+function placeCards(answers, acks){
+  var sink = document.getElementById('decided-cards');
+  document.querySelectorAll('.dec').forEach(function(card){
+    var decided = !!answers[card.dataset.id] || !!acks[card.dataset.id];
+    if (decided && card.parentNode !== sink) sink.appendChild(card);
+  });
+  // A heading whose cards have all moved would otherwise sit over nothing.
+  document.querySelectorAll('#panel-open h2').forEach(function(h){
+    var n = h.nextElementSibling, live = false;
+    while (n && n.tagName !== 'H2'){
+      if (n.classList.contains('dec') || n.classList.contains('grid')) { live = true; break; }
+      n = n.nextElementSibling;
+    }
+    h.hidden = !live;
+  });
+  document.getElementById('count-open').textContent =
+    document.querySelectorAll('#panel-open .dec').length;
+  document.getElementById('count-decided').textContent = sink.querySelectorAll('.dec').length;
+}
+```
+
+**Four details that are each a defect if skipped:**
+
+| | |
+|---|---|
+| **An ACK with no answer also moves it** | It was settled off-board — in the terminal, usually. If only `answers` moves cards, a question the human already answered sits in the queue looking unasked, and they answer it twice. |
+| **…but say so on the card** | Render *"✅ Answered outside the board · PM acted &lt;when&gt; — &lt;did&gt;"*. 🔴 Otherwise acking becomes a way for the PM to make an unanswered question disappear. With the line, doing that is **a lie in writing**, which is a different act. |
+| **Hide headings that empty out** | Cards move; their `<h2>` does not. A heading over nothing reads as a rendering bug and costs trust in the whole page. |
+| **Counts on the tabs** | `Open 4` is the number the human actually wants, and it is the only part of the board readable without scrolling. |
+
+**Tab state persists in `localStorage`, and every read and write is wrapped in `try/catch`** — a
+browser with site data blocked throws on the *accessor*, not on a missing key, and an exception
+there takes the whole script down with it, including the status lines.
+
+**The empty state is a real state:** when nothing is open, say *"Nothing waiting on you"* rather
+than rendering a blank panel. A blank panel is indistinguishable from a page that failed to load.
+
+⚠ **`board-server.py` needs no change for any of this** — it already returns `answers` and `acks`
+from `/state`. The tabs are entirely client-side, so this costs one page and no new endpoint.
+
 🔴 **The `did` field is the point, and it is not a receipt.** *"Relayed to WS3 with three conditions:
 it must write the key production actually reads…"* tells Heiko his decision had consequences and what
 they were. *"Acknowledged"* tells him nothing and is worse than silence, because it looks like closure.
@@ -147,7 +211,7 @@ and failure states are indistinguishable from where the user stands.
   <script>function pick(el){post(el.dataset.answer,'')}</script>
   ```
   Applies to every `decide(...)`/`pick(...)` button on the index, UAT rows, and decision briefs. After authoring, verify no page has prose-in-onclick: `grep -nE 'onclick="[a-z]+\("' *.html` must return nothing, then click one button whose label contains an apostrophe.
-- **Never leave a resolved item on the board.** Same discipline as the runbook: a dead warning on a fixed defect is worse than no warning.
+- **Never leave a resolved item in the Open tab.** Same discipline as the runbook: a dead warning on a fixed defect is worse than no warning. 🔴 **Do not obey this by hand — it is enforced by `placeCards` (§3 above), which derives placement from `/state` on every refresh.** This rule predates that mechanism and was routinely broken while it was a matter of discipline; a board reached eleven answered cards in the Open list on 2026-09-02. A rule that depends on someone tidying up on their busiest day is not a rule.
 - **Notes carry evidence, not adjectives** ("verified across 5 boots", not "should be fine").
 - **Recommendations are honest** — say when reasoning runs ahead of a workstream's detail, and offer "wait for the brief" as a real option.
 - The write-back appends to `.handover/outbox-to-pm.md` — **do not invent a second channel.** ⚠ But see
@@ -155,3 +219,23 @@ and failure states are indistinguishable from where the user stands.
   outbox at all, so the `Monitor` watch is the only thing that wakes the PM on a click.
 - **Buttons everywhere Heiko must answer.** Use the data-attribute handler (`decideEl(this)` reading `data-id`/`data-answer`) — never prose inside the JS call. Every card ends in buttons; a card he cannot answer from is unfinished.
 - After editing, verify ALL of: `curl -s -o /dev/null -w "%{http_code}" http://localhost:8794/` · `grep -nE 'onclick="[a-z]+\("' *.html` returns nothing · the roster names match `ws-pulse.py` exactly · the trunk sha matches `git log origin/main` · every open PR on the board is still open and every merged one is gone.
+- 🔴 **Also verify the tabs actually sort, by computing it rather than by looking at the page.** The
+  page renders correctly in a browser you may not have open, and "it looked fine" is not a
+  measurement:
+  ```bash
+  curl -s http://localhost:8794/state | python3 -c "
+  import json,sys,re
+  st=json.load(sys.stdin); ans=st['answers']; acks=st['acks']
+  cards=re.findall(r'class=\"dec[^\"]*\" data-id=\"([^\"]+)\"', open('index.html').read())
+  op=[c for c in cards if c not in ans and c not in acks]
+  print('OPEN (%d):'%len(op)); [print('   -',c) for c in op]
+  print('DECIDED: %d'%(len(cards)-len(op)))"
+  ```
+  **Positive-control it:** the id in `data-id` must match the id in the outbox line **byte for
+  byte**, so change one card's `data-id` by a character and confirm it jumps back to OPEN. A
+  mismatched id fails silently — the card simply never moves and never shows its status, which
+  looks exactly like a decision nobody has answered.
+- **Validate the HTML nesting after any structural edit** — panels are nested `<div>`s and an
+  unclosed one swallows the rest of the page with no error:
+  `python3 -c "from html.parser import HTMLParser; ..."` walking a tag stack, or any parser that
+  reports mismatches. Confirm each `panel-*` id appears exactly once and in order.
