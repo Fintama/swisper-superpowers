@@ -46,7 +46,27 @@ SENDER = os.environ.get("MSG_SENDER", "UNATTRIBUTED")
 # The corollary is what makes the change safe: with MSG_SESSION unset, every byte
 # this tool emits is exactly what it emitted before C1. T-AC-3 asserts that.
 SESSION = os.environ.get("MSG_SESSION") or None
-LANES = ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"]
+def lanes():
+    """The roster, DERIVED from program.yaml — never a typed copy.
+
+    It was a hand-typed list until 2026-09-12, and it had gone stale: WS7 was
+    registered in program.yaml and absent here, so `msg.py all` reached six of seven
+    lanes AND REPORTED SUCCESS FOR EACH ONE IT TRIED. A broadcast that silently omits
+    a lane is worse than no broadcast, because the sender believes everyone was told.
+    Registering a lane is now the only act needed to make it reachable.
+
+    🔴 NO SILENT FALLBACK. If the registry cannot be read this RAISES, and the caller
+    refuses. Falling back to a stale literal is the original bug wearing a hat: the
+    bus would keep messaging a set that quietly stopped matching the programme. Same
+    idiom as program_root.py, which refuses to guess a root rather than read another
+    programme's mailbox.
+
+    Called LAZILY, only by --status and by the `all` broadcast. A NAMED target must
+    keep working when the registry is broken — that path never touches this.
+    """
+    from program_yaml import load          # sibling; sys.path was extended above
+    data = load(f"{_pr()}/program.yaml")
+    return [w["name"] for w in (data.get("workstreams") or data.get("lanes") or [])]
 
 
 def _next_seq(lane):
@@ -215,7 +235,15 @@ def send(lane, text):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--status":
-        for l in LANES:
+        try:
+            roster = lanes()
+        except Exception as e:                       # HC-2: refuse, never a stale list
+            print(f"REFUSED: cannot read the lane roster from {_pr()}/program.yaml — {e}\n"
+                  "The roster is derived, so a broken registry means the channel map is "
+                  "unknown, not 'the last six lanes'. Fix program.yaml and re-run; a NAMED "
+                  "target (msg.py WS5 'text') still delivers meanwhile.")
+            sys.exit(1)
+        for l in roster:
             print(f"{l}: {'tmux-hosted (instant)' if hosted(l) else 'panel (polled)'}")
         sys.exit(0)
     if len(sys.argv) < 3:
@@ -232,6 +260,16 @@ if __name__ == "__main__":
               "delivery, usually in the SENDER's own command line. Rewrite in plain words "
               "(and single-quote the msg.py argument) and resend.")
         sys.exit(1)
-    targets = LANES if target.lower() == "all" else [target.upper()]
+    if target.lower() == "all":
+        try:
+            targets = lanes()                        # derived; see lanes() for why no fallback
+        except Exception as e:                       # HC-2
+            print(f"REFUSED: cannot read the lane roster from {_pr()}/program.yaml — {e}\n"
+                  "A broadcast over a roster we cannot read would silently omit lanes, which "
+                  "is the exact defect this derivation removed. Address the lane by name to "
+                  "send now, and fix program.yaml before broadcasting.")
+            sys.exit(1)
+    else:
+        targets = [target.upper()]                   # PIN: never routed through the roster
     for l in targets:
         print(send(l, text))
