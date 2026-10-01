@@ -46,7 +46,8 @@ Full details, verification and migration notes: **[INSTALL.md](INSTALL.md)**.
 
 `writing-skills` · `using-superpowers` · `using-git-worktrees` · `dispatching-parallel-agents`
 
-Plus the tooling the programme skills call: a message bus (`scripts/msg.py`),
+Plus the tooling the programme skills call: the offline mailbox
+(`scripts/msg.py` — live sessions talk over Claude Code's built-in `SendMessage`),
 session monitoring (`scripts/ws-pulse.py`), the Mission Control board
 (`scripts/board-server.py`), lane spawning (`scripts/spawn-lane.sh`), and ghost
 reaping (`scripts/reap-ghosts.sh`).

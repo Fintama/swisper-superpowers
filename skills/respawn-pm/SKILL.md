@@ -18,7 +18,8 @@ House pattern (reference: `PM-HANDOVER-2026-07-26-uat-a-wave-to-mlp-merge.md`): 
 
 ## 3. List the session-bound losses explicitly
 They die with this session and must be recreated by the successor in its first minutes:
-- **Crons** — the PM poll (cadence + the EXACT prompt text, verbatim).
+- **Crons** — the PM's recurring check (cadence + the EXACT prompt text, verbatim). It exists for silence and board drift, not for reading mail — lanes reach the PM by `SendMessage`. If an old handover lists an outbox-reading poll, it is retired; do not recreate it.
+- **The board's `Monitor` watch** on `outbox-to-pm.md` (`update-program-board`) — without it Heiko's clicks wake nobody.
 - **tmux hosts** — run `tmux ls`; name each session and which lane it carries, so the successor keeps the baton map straight.
 - Any background watchers or unfinished monitors.
 
@@ -30,9 +31,9 @@ Project memory: point the program memories at the new handover as CURRENT, corre
 **Panel (if Heiko wants it in his UI):** tell him — "PM context at <X>% — successor prep complete. Open a session, paste §last of `<handover>`, then `/rename PM-<k+1> Program Manager …`".
 
 ## 6. Register and verify the successor
-Confirm a transcript appeared (no transcript = the child-session marker leaked; respawn with a clean env). Add/replace the PM entry in the ws-pulse map. Then confirm the successor: read the handover, verified trunk state itself, **recreated the poll cron**, re-mapped any respawned session ids, and announced takeover (to Heiko + one line into each WS inbox: "PM-<k+1> live, same protocol").
+Confirm a transcript appeared (no transcript = the child-session marker leaked; respawn with a clean env). Add/replace the PM entry in the ws-pulse map. **Read the successor's address from `ListAgents` and write it to `pm_address` in `program.yaml`** — every lane still holds yours. Then confirm the successor: read the handover, verified trunk state itself, **recreated the recurring check and the board watch**, re-mapped any respawned session ids, and announced takeover — to Heiko, by `SendMessage` to every running lane ("PM-<k+1> live at `<address>`, same protocol"), and to the mailbox of every lane that is not running. Messaging rules: `../running-a-programme/references/messaging.md`.
 
 ## 7. Decommission this session
-`CronDelete` every own cron · append `SUPERSEDED by PM-<k+1>, <timestamp>` to the handover · stop answering program traffic (if addressed, one line pointing at the successor). Do NOT kill tmux hosts carrying live workstreams — hand them over in the handover instead. The transcript remains the archive.
+`CronDelete` every own cron · stop every own `Monitor` · append `SUPERSEDED by PM-<k+1>, <timestamp>` to the handover · stop answering program traffic (if a message still reaches you, reply once with the successor's address). Do NOT kill tmux hosts carrying live workstreams — hand them over in the handover instead. The transcript remains the archive.
 
-**Anti-patterns:** handing over unverified claims · forgetting that crons and tmux hosts die with the session (monitoring and instant delivery silently stop) · writing the handover after degradation · two PMs answering traffic.
+**Anti-patterns:** handing over unverified claims · forgetting that crons, watches and tmux hosts die with the session (monitoring silently stops) · leaving lanes on the old PM address (their reports reach a decommissioned session) · writing the handover after degradation · two PMs answering traffic.

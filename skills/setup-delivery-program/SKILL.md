@@ -176,6 +176,7 @@ or sequence it.
 | **name** | `WS<n>-<Name>` — load-bearing; scripts parse it |
 | **id** | lane plus incarnation, e.g. `WS5-6`. Changes on respawn; the name does not |
 | **session** | the agent session actually holding the lane |
+| **address** | that session's name as `ListAgents` shows it — the `SendMessage` address. Changes on respawn |
 | **scope** | one line. If it needs two, it is two lanes |
 | **owned paths** | what this lane may edit — test 3 |
 | **serves** | which Mission Goal — test 7 |
@@ -208,10 +209,15 @@ and lose a day to it.
       `$CLAUDE_PLUGIN_ROOT/scripts/` — only the lane map is programme-owned.
 - [ ] **Scaffold the board** — use `update-program-board` for the structure. Do
       not invent a layout here.
+- [ ] **Record your own address** as `pm_address` in `program.yaml` — your
+      session's name as `ListAgents` shows it. Every spawn document hands it on.
 - [ ] **Register the PM's recurring check.** Write its prompt yourself — there is
       no template, and one pointing at a file that does not exist is worse than
-      none. It should say: re-read `program.yaml` and the board, check each lane
-      is live and unblocked, and act on anything waiting.
+      none. It should say: re-read `program.yaml` and the board, run
+      `stall-check.py`, and chase any lane that is silent or blocked.
+      **It does not read mail** — lanes reach you by `SendMessage`, which wakes
+      you. It exists because a stalled lane sends nothing, so silence has to be
+      looked for (`../running-a-programme/references/messaging.md`).
       ⛔ **It carries invariants only** — no commit SHA, no PR number, no work
       queue, no dated claim. State goes stale; a recurring prompt does not get
       re-read, so a fact baked into it is wrong forever and silently.
@@ -224,7 +230,9 @@ For **each** lane, in order:
 
 - [ ] **Write its spawn document** — `SPAWN-<date>-WS<n>-session-1.md`.
       **State only**: identity line, scope, owned paths, the Mission Goals, its
-      branch and base, worktree path, allocated rig ports, and verified trunk SHA.
+      branch and base, worktree path, allocated rig ports, verified trunk SHA,
+      and **the PM's address** (`pm_address`) — a lane that does not know where
+      to send cannot report.
       **Method belongs in `running-a-workstream`, which the doc points at** — do
       not restate it. A brief that mixes state and method rots at the first
       re-scope and nobody can tell which half aged.
@@ -266,6 +274,8 @@ For **each** lane, in order:
 
       **Assert the `cwd` is the lane worktree before recording anything.** The id
       goes in the monitoring map; a lane in the wrong tree is stopped, not fixed.
+      **Record the lane's address** in `program.yaml` — its name as `ListAgents`
+      shows it. Do not assume it equals the `/rename` title; read it.
 - [ ] **Verify the model from the transcript** — a typed `/model` is a claim
       until the running session agrees:
       `tail -40 ~/.claude/projects/<slug>/<id>.jsonl | grep -o '"model":"[^"]*"' | tail -1`

@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""msg — send a program message to a workstream, choosing the fastest live channel.
+"""msg — the OFFLINE mailbox and the record. NOT the live channel (since 2026-10-01).
 
-  python3 .handover/msg.py WS4 "your message"      # one lane
-  python3 .handover/msg.py all  "broadcast text"   # every lane
-  python3 .handover/msg.py --status                # channel map
+  MSG_SENDER=PM python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" WS4 'your message'
+  MSG_SENDER=PM python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" all  'broadcast'
+  python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" --status          # tmux seat map
 
-Hosted lanes (a tmux session named ws<n>) are TYPED INTO — the message arrives as a
-prompt and wakes the session. **Delivery is then VERIFIED by reading the pane back**;
-an unverified send is reported as such and must be chased. Panel lanes fall back to
-the file mailbox `.handover/inbox/WS<n>.md`.
+A RUNNING session is reached with Claude Code's built-in SendMessage, addressed by
+its session name as ListAgents shows it — that is the live channel. Use this script
+for a session that is NOT running: a built-in message to one is lost, and the
+mailbox `.handover/inbox/WS<n>.md` is what its respawned successor reads at start.
+Rules: skills/running-a-programme/references/messaging.md.
 
-The inbox mirror is written by the SENDER, so it is an audit trail — never evidence
-that the lane received anything. Read the exit line, not the mirror.
+Behaviour is unchanged from the tmux era: if a tmux session named ws<n> exists, the
+message is still TYPED INTO it and verified by reading the pane back; otherwise it
+is appended to the mailbox. Either way the mailbox gets a copy.
+
+That copy is written by the SENDER, so it is an audit trail — never evidence that
+the lane received anything. Read the exit line, not the mirror.
 """
 import subprocess, sys, time, os
 

@@ -53,7 +53,8 @@ you were assigned — it is to **bring the programme closer to those goals**.
 - [ ] **Use the rig ports your spawn doc allocated.** Ports and compose project
       names are **global to the machine**, not to the programme. Taking an
       unallocated port collides with a lane you cannot see.
-- [ ] **Tell the PM you are live**, with your branch and rig URL.
+- [ ] **Tell the PM you are live**, with your branch and rig URL — at the PM
+      address your spawn document names.
 
 ⚠ **One standing rig per lane, and it belongs to the integration branch.** Your
 sub-branches and your subagents get none — their inner loop needs no server, and
@@ -161,6 +162,8 @@ urgency is an argument for a fast decision, never for skipping one.
 
 ## Messaging
 
-Read `../running-a-programme/references/messaging.md`. **Every message identifies
-its sender.** An unattributed message on a shared bus costs the reader a lookup
-and, when two lanes report the same symptom, makes the count meaningless.
+**Read `../running-a-programme/references/messaging.md` before your first
+message** — how to reach the PM (its address is in your spawn document), when the
+mailbox is used instead, what must also go in your status file, and why a peer's
+message is never the human's approval. It is the single source; nothing here
+restates it.

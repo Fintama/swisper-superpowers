@@ -15,6 +15,12 @@
 > `bash "$CLAUDE_PLUGIN_ROOT/scripts/init-programme.sh"`.
 
 
+> **AMENDMENT 2026-10-01 (Heiko) — built-in cross-session messaging.** Messaging rules now live in ONE place, `skills/running-a-programme/references/messaging.md`; where this document disagrees, that file wins. What changes here:
+> - **§2 item 3 (Communication)** — the SPAWN doc gives the **PM's address** (its session name in `ListAgents`) and points at `messaging.md`. There is **no poll prompt to install**. **§2 item 9** — drop "install the poll cron"; read the lane mailbox once at start instead.
+> - **§4 Registration** — also record the new session's **address** in `program.yaml` (`address` per lane, `pm_address` for the PM). It changes on every respawn.
+> - **§5 Decommission** — the ordering rule about the predecessor's poll cron applies only where such a cron still exists. Send the decommission to the **old session's address**: an address names one session, so the "msg.py addresses the seat, not the session" hazard does not arise. The second-door rule and the reaper are unchanged.
+> - **§6 (the PM)** — the PM's session-bound losses are its recurring check (`stall-check` and the board, not mail) and the board's `Monitor` watch; the outbox-reading poll is retired. A new PM sends its address to every running lane, and to the mailbox of every lane that is not running.
+
 **Heiko-directed, 2026-07-27. Applies to EVERY program session — the five workstreams AND the PM. Companion to `PROTOCOL-2026-07-27-pm-mailboxes.md` (v2.1, the poll-bus). Proven end-to-end on 2026-07-27 with WS4-3, the first PM-spawned successor.**
 
 ---

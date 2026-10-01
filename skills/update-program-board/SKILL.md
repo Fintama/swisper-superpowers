@@ -56,7 +56,7 @@ thought about it and can be asked why.
 This applies to the *judgement*, not to the *facts*: pulling the roster out of
 `program.yaml` is not generating a decision.
 
-- **`index.html` — the overview.** Status tiles (rig · production · open PRs · next migration — all links using named targets `rig`/`prod`/`gh` so they reuse a tab) · **⚡ Needs you** (decisions, urgency-sorted, each showing what it blocks) · **🧪 UAT board** (blocking first, then open, then passed-with-evidence) · **👥 The team** (canonical names, live/idle, channel: message-driven vs polled) · **🔀 Open PRs** with gate state · **🗺 Roadmap & program docs** · **🎨 Screens** — links to the *existing* detailed pages, never a duplicate list.
+- **`index.html` — the overview.** Status tiles (rig · production · open PRs · next migration — all links using named targets `rig`/`prod`/`gh` so they reuse a tab) · **⚡ Needs you** (decisions, urgency-sorted, each showing what it blocks) · **🧪 UAT board** (blocking first, then open, then passed-with-evidence) · **👥 The team** (canonical names, live/idle, address — the session name `SendMessage` reaches) · **🔀 Open PRs** with gate state · **🗺 Roadmap & program docs** · **🎨 Screens** — links to the *existing* detailed pages, never a duplicate list.
 - **Detail pages carry the substance** — the deep view stays where it already lives: `09-uat-a-runbook.html` (per-test cases with evidence), `00-index.html` (screen/mock pill-ledger), `design-philosophy.html`.
 - **DECISIONS ARE EXPANDABLE CARDS ON THE INDEX — not separate pages** (Heiko, 2026-07-28: separate pages fragmented his attention; a wall of dense table prose was worse). Each is a `<details class="dcard">`: the closed summary shows **title · one-line why · what it blocks · urgency pill**; opening it reveals the FULL brief, always these five headings in this order —
   **Background** (what a reader needs to know before the problem makes sense) · **The problem** (what is wrong, concretely, with the user-visible consequence) · **The options** (table: option · what it means · pros AND cons — every option gets both) · **My recommendation** (green `.rec` box, one clear pick with the reasoning, and an honest note wherever my reasoning runs ahead of the evidence) · **Your call** (the buttons).
@@ -151,7 +151,7 @@ and failure states are indistinguishable from where the user stands.
 - **Notes carry evidence, not adjectives** ("verified across 5 boots", not "should be fine").
 - **Recommendations are honest** — say when reasoning runs ahead of a workstream's detail, and offer "wait for the brief" as a real option.
 - The write-back appends to `.handover/outbox-to-pm.md` — **do not invent a second channel.** ⚠ But see
-  **A click must WAKE the PM** below: "the PM wake-up already reads it" is only true if a wake-up
-  actually exists.
+  **A click must WAKE the PM** below: since 2026-10-01 the PM's recurring check no longer reads the
+  outbox at all, so the `Monitor` watch is the only thing that wakes the PM on a click.
 - **Buttons everywhere Heiko must answer.** Use the data-attribute handler (`decideEl(this)` reading `data-id`/`data-answer`) — never prose inside the JS call. Every card ends in buttons; a card he cannot answer from is unfinished.
 - After editing, verify ALL of: `curl -s -o /dev/null -w "%{http_code}" http://localhost:8794/` · `grep -nE 'onclick="[a-z]+\("' *.html` returns nothing · the roster names match `ws-pulse.py` exactly · the trunk sha matches `git log origin/main` · every open PR on the board is still open and every merged one is gone.

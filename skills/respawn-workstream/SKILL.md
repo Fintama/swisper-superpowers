@@ -5,16 +5,18 @@ description: PM procedure to succeed a workstream session whose context is nearl
 
 # Respawn a workstream session (succession, not loss)
 
-Trigger: an outbox `CONTEXT ALERT` (ctx ≤15%), a session showing degradation (forgetting rules, re-asking settled questions), or Heiko's request.
+Trigger: a lane's `CONTEXT ALERT` (ctx ≤15%), a session showing degradation (forgetting rules, re-asking settled questions), or Heiko's request.
+
+**Messaging:** `../running-a-programme/references/messaging.md` is the single source. Below, "send" means `SendMessage` to the session's address while it is running, and the lane mailbox when it is not.
 
 **Canonical spec — naming, the nine-part context package, spawn commands + gotchas, registration and decommission: `${CLAUDE_PLUGIN_ROOT}/docs/PROTOCOL-2026-07-27-session-lifecycle.md`** (C4 — ships with the plugin; Foundry's `.handover/` copy stays for its own historical citations).** Read it; this skill is the operational sequence on top of it.
 
-## 1. Secure the handover (old session, via its inbox or Heiko-paste)
+## 1. Secure the handover (send to the old session at its address, or Heiko-paste)
 Instruct: finish/park the current task at a safe point (never mid-migration or mid-PR), then write the **CONTINUATION package (protocol §2 v2, ≤2KB)** into the lane's status file: **IN-FLIGHT (branch+commit+literal next step) · NEXT · DECISIONS OWED · live traps · pointer list (spec §, plan, share/ docs, memory names)**. LANDED = one line of PR numbers — git is the record, the PM already knows the history. **Move everything older into `WS<N>-STATUS-archive.md`** (successors never read it; PM greps on demand).
 **Verify it yourself against git** (branch exists, commits pushed, claims true) — handover labels don't always survive a grep.
 
 ## 2. Write the spawn prompt — `.handover/SPAWN-<date>-WS<N>-session-<k+1>.md`
-Pattern: identity line ("You are WS<N> — <lane>, session <k+1>") · read-first list (working model / SWITCH doc → own status **current block only** → protocols → lane charter) · **an explicit DO-NOT-READ list** (the archive file, superseded specs) · **verified live state** (trunk sha, open PRs, worktree, migration ladder next-free) — from git, not from the old session's words · duties in priority order · standing rules (single-writer map, biome CI pin, squash-branch discipline, merges auto-deploy, **§2b context economy: subagent-first for investigations/builds/tests, quiet.sh for verbose ops, ≤3-sentence bus messages**) · **channel** (hosted lanes get NO poll cron — messages arrive as prompts; outbox uplink with ctx%) · **context rule** (ctx% in every outbox message; alert at 85% full) · first actions (verify trunk, SESSION marker in status file, tell the PM you're live).
+Pattern: identity line ("You are WS<N> — <lane>, session <k+1>") · read-first list (working model / SWITCH doc → own status **current block only** → protocols → lane charter) · **an explicit DO-NOT-READ list** (the archive file, superseded specs) · **verified live state** (trunk sha, open PRs, worktree, migration ladder next-free) — from git, not from the old session's words · duties in priority order · standing rules (single-writer map, biome CI pin, squash-branch discipline, merges auto-deploy, **§2b context economy: subagent-first for investigations/builds/tests, quiet.sh for verbose ops, ≤3-sentence bus messages**) · **channel** (the PM's address to report to, plus a pointer to `messaging.md` — no poll cron, and no restating the rules; read the lane mailbox once at start, it holds what was sent while no session was running) · **context rule** (`[ctx:%]` on every message; alert at 85% full) · first actions (verify trunk, SESSION marker in status file, tell the PM you're live).
 
 ## 3. Spawn and NAME it — the name is the registration
 **Canonical naming convention (Heiko, 2026-07-27):** `WS<N>-<k> <Lane> — <human-readable scope>`
@@ -51,7 +53,7 @@ the lane nothing.
 **Panel spawn (lanes Heiko drives directly):** hand him the SPAWN doc; he opens a session, pastes it, and renames it with `/rename <canonical name>`.
 
 ## 4. Register the new session
-Find its session id: newest `*.jsonl` in `~/.claude/projects/<project>/` whose first user message contains the spawn-prompt identity line. Update **`.handover/ws-pulse.py` WS map**: replace the lane's id, comment the old one as retired with date. Run `ws-pulse.py` once to verify the new session shows LIVE. Ensure `.handover/inbox/WS<N>.md` exists (it persists across sessions — the new session inherits the mailbox).
+Find its session id: newest `*.jsonl` in `~/.claude/projects/<project>/` whose first user message contains the spawn-prompt identity line. Update **`.handover/ws-pulse.py` WS map**: replace the lane's id, comment the old one as retired with date. Run `ws-pulse.py` once to verify the new session shows LIVE. **Read its address from `ListAgents` and record it as the lane's `address` in `program.yaml`** — the old address now reaches the retired session, not the lane. Ensure `.handover/inbox/WS<N>.md` exists (it persists across sessions — the new session inherits the mailbox).
 
 ## 4b. REAP THE OLD PROCESS (mandatory — not optional cleanup)
 A decommissioned session survives as its own `claude --resume=<id>` process if it is open in a VS Code panel; closing the window does not kill it, and it will keep working (observed twice on 2026-07-27, both forked a lane). After the successor is seated and the pulse map remapped:
@@ -66,9 +68,9 @@ ghost. Read the report and recognise the sessions in it before you ever add
 It refuses to touch any id present in the `ws-pulse.py` map, so remap FIRST or it will decline to reap. Verify the report then shows only LIVE lanes. A reaped session may still appear in VS Code until the view refreshes — inert, cosmetic only.
 
 ## 5. Decommission the old session
-Via inbox or Heiko: "Session <k> is decommissioned — append a final `PROCESSED-MARKER` + 'superseded by session <k+1>' to the inbox, make no further writes." Confirm its worktree is clean or handed over (never delete a dirty worktree). Heiko closes the window. The old transcript stays on disk as the archive.
+Send to the OLD session's address (or via Heiko): "Session <k> is decommissioned — append a final `PROCESSED-MARKER` + 'superseded by session <k+1>' to the inbox, make no further writes." An address names one session, so this cannot land on the successor the way a message to the lane's seat could. Confirm its worktree is clean or handed over (never delete a dirty worktree). Heiko closes the window. The old transcript stays on disk as the archive.
 
 ## 6. Record
 One line in the lane's status file ("SESSION <k+1> — succeeded session <k>, <date>") and, if the program tracker/memory carries session ids, update them.
 
-**Anti-patterns:** spawning before the handover is verified · trusting "cosmetic"/"done" labels without grep · reusing the old branch after a squash merge · forgetting the pulse-map remap (monitoring silently watches a dead session).
+**Anti-patterns:** spawning before the handover is verified · trusting "cosmetic"/"done" labels without grep · reusing the old branch after a squash merge · forgetting the pulse-map remap (monitoring silently watches a dead session) · forgetting the `program.yaml` address (the PM's messages go to the retired session).

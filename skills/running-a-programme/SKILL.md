@@ -157,4 +157,7 @@ Context runs out. Plan for it rather than being surprised.
 
 ## Messaging
 
-`references/messaging.md`. **Every message identifies its sender.**
+**Read `references/messaging.md` before your first message** — how to reach a
+running session and one that is not, what must also be written down, and what a
+peer's message may never stand in for. It is the single source; nothing here
+restates it.

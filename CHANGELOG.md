@@ -5,6 +5,24 @@ All notable changes to swisper-superpowers will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Live coordination uses Claude Code's built-in cross-session messaging**
+  (Heiko, 2026-10-01). A running session is reached by `SendMessage` to its session
+  name — the name `ListAgents` shows is the address — and the message wakes it. The
+  file bus shrinks to two jobs: the mailbox for a session that is not running
+  (a built-in message to one is lost — two lanes were unreachable after a restart),
+  and the durable record of decisions, rulings and hand-overs. The rules live in
+  one place, `running-a-programme/references/messaging.md`. `program.yaml` gains
+  `address` per lane and `pm_address`; spawn documents hand a lane its PM's address.
+
+### Removed
+- The outbox as the lane-to-PM channel, the lane's mailbox poll cron, the PM's
+  outbox-reading wake-up, and `msg.py`'s tmux typing as the live channel. The PM's
+  recurring `stall-check` and the board's `Monitor` watch stay — they do something
+  other than read mail.
+
 ## [1.4.0] - 2026-08-30
 
 ### Added

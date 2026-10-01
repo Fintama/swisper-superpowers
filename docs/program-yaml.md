@@ -16,6 +16,7 @@ repo: /Users/you/Projects/swisper_foundry
 board:
   dir: .handover/board
   port: 8794
+pm_address: swisper-foundry-b3      # the PM session's name in ListAgents
 
 goals:
   - id: G-1
@@ -26,6 +27,7 @@ lanes:
   - name: WS5                       # what humans call the lane
     id: WS5-6                       # lane + incarnation; changes on respawn
     session: 9f2c1a                 # the agent session actually holding it
+    address: swisper-foundry-2d     # that session's name in ListAgents
     scope: platform tooling
     worktree: /Users/you/wt/ws5
     branch: feature/ws5-thing
@@ -36,9 +38,16 @@ lanes:
       project: foundry-ws5          # the compose project name
 ```
 
-Every field above is **required**. A missing one is an error naming the field and
-the lane it belongs to — never a silent default, because a lane that half-exists
-is worse than one that does not.
+Every field above is **required**, except the two addresses. A missing one is an
+error naming the field and the lane it belongs to — never a silent default,
+because a lane that half-exists is worse than one that does not.
+
+**`pm_address` and `address` (added 2026-10-01)** are the `SendMessage` addresses
+— the session's name as `ListAgents` shows it. Both change on every respawn and
+are updated in the same edit as `session`. ⚠ **`program-yaml-check.py` does not
+yet require them:** making them required would fail every existing
+`program.yaml` at once. Until it does, a missing address is caught by nothing but
+the PM — see `skills/running-a-programme/references/messaging.md`.
 
 ## Why YAML and not JSON
 
