@@ -613,7 +613,7 @@ Then proceed to `superpowers:finishing-a-development-branch`.
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
-[Read plan file once: docs/superpowers/plans/feature-plan.md]
+[Read plan file once: plans/<product>/2026-10-05-feature-plan.md in Swisper_Documentation]
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
 

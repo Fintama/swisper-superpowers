@@ -93,9 +93,9 @@ Task tool (general-purpose):
     - **Magic numbers:** hard-coded numeric constants (e.g., `100`, `300_000`, `4097`) that should be named constants. Exceptions: zero, one, true booleans.
     - **Magic strings:** hard-coded string constants that should be enums / const tables (e.g., status flags, role names).
 
-    ### Part 5 — ADR debt
+    ### Part 5 — Decision debt (ADRs, or the architecture page's "Why it is like this" block)
 
-    - **Non-obvious decisions undocumented:** does the diff introduce a non-obvious design decision (a non-default choice between alternatives, an architectural trade-off, a license boundary, a deviation from the project's standard pattern) without a corresponding ADR file? If yes, flag.
+    - **Non-obvious decisions undocumented:** does the diff introduce a non-obvious design decision (a non-default choice between alternatives, an architectural trade-off, a license boundary, a deviation from the project's standard pattern) without a record of it? Where the project has an architecture site the record is the "Why it is like this" block of the page the decision shaped (there are no ADRs); otherwise an ADR file. If missing, flag.
     - **Superseded ADRs:** if the diff changes a decision documented in an existing ADR, has the old ADR been marked superseded with a pointer to its replacement?
     - **ADR template conformance:** new ADRs follow the project's template (typically Context / Decision / Consequences / Alternatives Considered).
 

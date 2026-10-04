@@ -65,6 +65,9 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `subagent-driven-development` | `render-gate.mjs` | Build-vs-mock compared mechanically, not by eye. |
 | `finishing-a-development-branch` | `Step 1b: Update the Documentation` | In a repo with an architecture site, `update-documentation` runs before any merge or PR is offered. |
 | `writing-plans` | `update-documentation` | Every per-PR merge gate carries the docs check, for repos with an architecture site. |
+| `brainstorming` | `Swisper_Documentation` | Specs are saved in the Fintama docs home (`specs/<product>/`, main only, `tools/docs-save`), not `docs/superpowers/specs`. Ruled by Heiko 2026-10-04; an upstream merge restoring the old path would quietly scatter specs again. |
+| `writing-plans` | `Swisper_Documentation` | Plans are saved in `plans/<product>/` of the docs home, and deferred work goes to Jira, not a backlog section. Same ruling. |
+| `update-documentation` | `Why it is like this` | ADRs are dropped: a non-obvious decision is recorded on the architecture page it shaped. Technical debt goes to Jira with the finding number. Same ruling. |
 | `subagent-driven-development` | `update-documentation` | The PR-boundary review runs it, so no PR leaves the boundary with stale architecture pages. |
 
 ## Rows deliberately NOT in this table

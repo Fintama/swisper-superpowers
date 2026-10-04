@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-04
+
+### Changed
+- **Docs home (Heiko, 2026-10-04).** For Fintama products, `brainstorming` saves specs to
+  `specs/<product>/` and `writing-plans` saves plans to `plans/<product>/` in Swisper_Documentation.
+  That repo is main only, written with its `tools/docs-save`, and its README is the rulebook.
+  Other projects keep `docs/superpowers/…`. Deferred work goes to the tracker (Jira, project SA),
+  not a backlog section.
+- **ADRs and TDRs dropped where a project has an architecture site.** `update-documentation`
+  records a non-obvious decision in the shaped page's `## Why it is like this` block, and
+  technical debt becomes a Jira ticket carrying the finding number. The reviewers and the
+  verification checklists check for that record instead of an ADR file.
+- React screen mocks stay in the product repo (`design/mocks/<slug>/`); `brainstorming` says so.
+- DIVERGENCE.md: three rows guard these paths against an upstream merge.
+
 ## [1.5.0] - 2026-10-04
 
 ### Added

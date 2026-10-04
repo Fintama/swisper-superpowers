@@ -33,7 +33,7 @@ You MUST create a task for each of these items and complete them in order:
 6. **Present design** — in sections scaled to their complexity, get approval after each section, **then ask for approval of the whole before writing it up**. Section-by-section approval sums to a design nobody ever approved as a whole.
 
    🔴 **If any part of this design is a user-visible surface, the mock comes FIRST and the mock IS the design for that surface.** Invoke `creating-screen-mocks` and get the mock approved before writing §1 for it. Do not describe a screen in prose here — §1's `ux` field expects a **mock path, route and states**, which presupposes one exists. A spec that describes a screen in words next to a mock that shows it has specified it twice, and the two will disagree; a spec that describes one where no mock exists has handed an implementer a screen to invent.
-7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit. §0 goes in **as agreed at step 4** — if writing the design changed your understanding of the goal, that is a change to take back to the user, not a silent edit.
+7. **Write design doc** — save it to the docs home: for Fintama products, `specs/<product>/YYYY-MM-DD-<topic>-design.md` in **Swisper_Documentation**, main only, written with its `tools/docs-save` (its README is the rulebook; never a branch). Elsewhere, `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, then commit. §0 goes in **as agreed at step 4** — if writing the design changed your understanding of the goal, that is a change to take back to the user, not a silent edit.
 8. **Spec self-review — seven checks, run by the author.** See "Spec Self-Review" below. **No agent is dispatched.**
 9. **User reviews the written spec — this is the ONLY review gate.** Ask them to read it before anything else happens. They were in the room when §0 was agreed, so they are the only reviewer who can actually answer *"is this aimed at the right thing?"*.
 10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
@@ -485,10 +485,11 @@ folded    §1 C2 rewritten · §2 RULE-1 unchanged · plan PR-2 authority widene
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design (spec) to the docs home: for Fintama products, `specs/<product>/YYYY-MM-DD-<topic>-design.md` in Swisper_Documentation (main only, `tools/docs-save`); elsewhere `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
+  - A user-visible surface's React mock lives in the PRODUCT repo at `design/mocks/<slug>/`, never in the docs repo; the spec links to it and the commit it was approved at
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Save the design document (docs-repo `tools/docs-save`, or a commit where there is no docs home)
 
 **Spec Self-Review — seven checks:**
 

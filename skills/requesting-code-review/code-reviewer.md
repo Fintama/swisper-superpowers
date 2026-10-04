@@ -104,7 +104,7 @@ Task tool (general-purpose):
     - Migration strategy if schema changed?
     - Backward compatibility considered?
     - Documentation complete? README / ARCHITECTURE / CONTRIBUTING / CHANGELOG updated where the project's quality bar requires?
-    - ADR added under the project's ADR directory if the PR introduced a non-obvious decision?
+    - Non-obvious decision recorded (architecture page "Why it is like this" block where the project has an architecture site; otherwise an ADR under the project's ADR directory)?
     - No obvious bugs?
 
     ## Calibration

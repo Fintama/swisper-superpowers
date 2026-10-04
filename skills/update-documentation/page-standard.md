@@ -1,6 +1,6 @@
 # The page standard (architecture site)
 
-The binding sources are the approved spec (`docs/superpowers/specs/2026-10-04-architecture-site-design.md`: §1.2 page format, §1.4 diagrams, §1.5 findings, §1.6 quality, §8 amendments) and the model pages `architecture/pages/0-start/0.3-*.md` (Overview) and `architecture/pages/E/E.2-*.md` (Design). **Copy the shape of the model page nearest yours.** This file is the summary, not a substitute.
+The binding sources are the approved spec (Swisper_Documentation `specs/swisper/2026-10-04-architecture-site-design.md`: §1.2 page format, §1.4 diagrams, §1.5 findings, §1.6 quality, §8 amendments) and the model pages `architecture/pages/0-start/0.3-*.md` (Overview) and `architecture/pages/E/E.2-*.md` (Design). **Copy the shape of the model page nearest yours.** This file is the summary, not a substitute.
 
 ## Front matter (strict: these keys, nothing else)
 
