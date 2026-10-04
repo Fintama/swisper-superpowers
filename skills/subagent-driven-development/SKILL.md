@@ -592,6 +592,7 @@ Then dispatch TWO subagents in sequence (not in parallel — maintainability rev
 
 Apply each review's Critical / High / Important findings before proceeding. Then:
 
+- If the repo has `architecture/tools/impact.py`: run `swisper-superpowers:update-documentation` on the PR's diff — a PR does not leave the boundary with its architecture pages stale
 - Update the plan's PR decomposition table to mark the PR complete
 - **Suggest merge into the feature branch — do NOT auto-merge**
 - After human / reviewer / project tooling approval, merge the sub-branch into the feature branch

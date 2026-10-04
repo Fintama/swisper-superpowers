@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`update-documentation` — the architecture site matches the PR before the PR is
+  opened** (Heiko, 2026-10-04: "only when relevant: not when this is a code change or
+  a bug fix"). The skill is a decision per page — update, re-verify only, new page or
+  nothing — then the edits that decision demands, then proof (`make
+  architecture-check`, prettier 3.9.6, a Documentation section in the PR). Baseline
+  (`skills/update-documentation/BASELINE-2026-10-04.md`): without it, 7 of 7 runs
+  skipped the proof step, 4 of 4 stamps were left unformatted for CI, one agent
+  skipped the re-verify on a bug fix because the gate was WARN-only, and one rewrote
+  the findings register's pinned evidence. Wired into
+  `finishing-a-development-branch` (Step 1b), the `writing-plans` per-PR merge gate
+  and the `subagent-driven-development` boundary review, each only for repos with
+  `architecture/tools/impact.py`.
+- `divergence-check.sh` also requires a `.md` marker to exist as a file, so a merge
+  cannot drop `page-standard.md` while the skill still sends agents to it.
+
 ### Changed
 - **Live coordination uses Claude Code's built-in cross-session messaging**
   (Heiko, 2026-10-01). A running session is reached by `SendMessage` to its session
