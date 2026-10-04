@@ -380,6 +380,7 @@ Before suggesting merge of `<sub-branch>` into the feature branch:
 - [ ] Project quality-bar gates (typecheck, lint, coverage thresholds, property tests, perf benchmarks per spec quality bar) green on the sub-branch
 - [ ] If the PR introduced a non-obvious decision: ADR file added under the project's ADR directory
 - [ ] CHANGELOG.md updated for any user-facing change
+- [ ] If the repo has `architecture/tools/impact.py`: `update-documentation` run — each page the diff touches updated or re-verified, `make architecture-check` green
 
 Only then: mark the PR complete and suggest merge into the feature branch.
 ```

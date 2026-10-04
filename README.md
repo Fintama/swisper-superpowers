@@ -32,6 +32,7 @@ Full details, verification and migration notes: **[INSTALL.md](INSTALL.md)**.
 | `systematic-debugging` | Find the cause before changing anything; use the observability the system already has. |
 | `requesting-code-review` · `receiving-code-review` | Review prompts that produce findings rather than compliments. |
 | `verification-before-completion` · `finishing-a-development-branch` | Prove it works before saying it does. |
+| `update-documentation` | Before a PR, decide per architecture page whether the change needs an update, a re-verify, a new page or nothing — and prove it. |
 
 **Running a delivery programme**
 

@@ -9,7 +9,7 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Update docs (if the repo has an architecture site) → Detect environment → Present options → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -35,7 +35,17 @@ Cannot proceed with merge/PR until tests pass.
 
 Stop. Don't proceed to Step 2.
 
-**If tests pass:** Continue to Step 2.
+**If tests pass:** Continue to Step 1b.
+
+### Step 1b: Update the Documentation (repos with an architecture site)
+
+```bash
+[ -f architecture/tools/impact.py ] && echo "architecture site: run update-documentation"
+```
+
+**If it prints:** **REQUIRED SUB-SKILL:** use `swisper-superpowers:update-documentation` now, before presenting options — the docs must match the branch before it is merged or a PR is opened, and its proof (`make architecture-check` green) is a precondition like the tests. Carry its **Documentation** section into the PR body.
+
+**If it prints nothing:** no site; continue to Step 2.
 
 ### Step 2: Detect Environment
 
@@ -131,6 +141,9 @@ gh pr create --title "<title>" --body "$(cat <<'EOF'
 
 ## Test Plan
 - [ ] <verification steps>
+
+## Documentation
+<from update-documentation, Step 1b; omit only when the repo has no architecture site>
 EOF
 )"
 ```
@@ -234,6 +247,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 
 **Never:**
 - Proceed with failing tests
+- Merge or open a PR in a repo with `architecture/tools/impact.py` without running `update-documentation` first
 - Merge without verifying tests on result
 - Delete work without confirmation
 - Force-push without explicit request

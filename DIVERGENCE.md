@@ -36,6 +36,8 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `creating-screen-mocks` | `data-testid` | The join key the render gate needs. Without it nothing downstream can be compared. |
 | `creating-screen-mocks` | `init-workspace.sh` | The workspace is scaffolded with the review loop already wired. Measured: an agent that hand-wrote it shipped a mock nobody could click. An agent cannot forget a step it never performs. |
 | `creating-screen-mocks` | `verify-review-loop.mjs` | The gate that can fail on a missing review loop. Every other verification item passed on an unreviewable mock, so the verify phase was blind to the one omission that matters. |
+| `update-documentation` | `RE-VERIFY ONLY` | The per-page decision before a PR: update, re-verify only, new page or nothing. Measured 2026-10-04: without it an agent skipped the re-verify stamp on a bug fix ("WARN mode, I'll record the re-read in the PR text"). |
+| `update-documentation` | `page-standard.md` | The page format, the pyramid and the findings entry, summarised for the writer. SKILL.md sends the agent there before any edit, so the file must survive with the prose. |
 | `creating-screen-mocks` | `isTrusted` | `select-client` ignores scripted clicks so automation cannot clobber the reviewer's selection — and an agent that tries one sees nothing and debugs working code. Documented where it is met, not only inside the file. |
 
 ## Skills we substantially extended
@@ -61,6 +63,9 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `brainstorming` | `creating-screen-mocks` | A user-visible surface gets an approved mock BEFORE the spec describes it. |
 | `brainstorming` | `GRAFT TARGET` | The spec records which file the mock becomes, so the implementer adapts rather than rebuilds. |
 | `subagent-driven-development` | `render-gate.mjs` | Build-vs-mock compared mechanically, not by eye. |
+| `finishing-a-development-branch` | `Step 1b: Update the Documentation` | In a repo with an architecture site, `update-documentation` runs before any merge or PR is offered. |
+| `writing-plans` | `update-documentation` | Every per-PR merge gate carries the docs check, for repos with an architecture site. |
+| `subagent-driven-development` | `update-documentation` | The PR-boundary review runs it, so no PR leaves the boundary with stale architecture pages. |
 
 ## Rows deliberately NOT in this table
 

@@ -57,8 +57,11 @@ while IFS=$'\t' read -r skill marker; do
     # Tooling is routinely referenced from a skill that does not host it, and a
     # check that cries wolf trains everyone to ignore it — the same false-red
     # failure this fork warns about elsewhere, committed one file later.
+    # `.md` joined the list 2026-10-04: `update-documentation` sends the agent to
+    # `page-standard.md` before any edit, and a merge that dropped the reference file
+    # but kept the prose would leave the instruction pointing at nothing.
     case "$marker" in
-        *.sh|*.mjs|*.js|*.ts|*.py)
+        *.sh|*.mjs|*.js|*.ts|*.py|*.md)
             if [ -z "$(/usr/bin/find . -name "$marker" -not -path './.git/*' -print -quit)" ]; then
                 echo "LOST FILE       $skill — SKILL.md still names '$marker' but no such file exists in the fork"
                 missing=$((missing + 1))
