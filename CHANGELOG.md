@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-04
+
 ### Added
 - **`update-documentation` — the architecture site matches the PR before the PR is
   opened** (Heiko, 2026-10-04: "only when relevant: not when this is a code change or
