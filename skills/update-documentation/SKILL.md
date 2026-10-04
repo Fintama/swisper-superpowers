@@ -38,6 +38,9 @@ make architecture-gates BASE=origin/<base>                              # comple
 - PR **fixes** a finding → `status: fixed`, `fixed_by: #<PR>` (open the PR, then push that one line), append "done: `file:line` at `<sha>`" to `fix:`. Keep the entry, keep it in the page's `findings:` (it renders struck through), drop it from the page's `assessment:` strip.
 - PR **reveals** a flaw → add a finding in the page's chapter range: category, severity, evidence (`file:line`), consequence, impact, fix, cost. `suspected` until a second read.
 - "New items no page covers yet" → add each to the `covers:` of the page that explains it (the completeness gate counts it).
+- A finding that will be worked later, or any technical debt the PR leaves behind → a ticket in the backlog tracker (Fintama: Jira, project SA). Put the finding number (F-xxx) in the ticket, and the ticket key in the finding's `fix:` line. There are no TDR documents.
+
+**Decisions** (there are no ADRs; Heiko, 2026-10-04): if the PR makes a non-obvious choice between alternatives, record it on the page it shapes, under a `## Why it is like this` heading. Use one entry per decision: the date, the decision in one sentence, the alternatives rejected and why, and a link to the spec (Swisper_Documentation `specs/<product>/…`). A changed decision edits its entry; it does not append a contradicting one. Specs and plans themselves never go in the product repo.
 
 ## Rationalizations (from the baseline runs)
 

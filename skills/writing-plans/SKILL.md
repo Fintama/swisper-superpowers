@@ -15,7 +15,8 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** for Fintama products, `plans/<product>/YYYY-MM-DD-<feature-name>.md` in **Swisper_Documentation**, main only, with its `tools/docs-save` (never a branch; its README is the rulebook). Elsewhere `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`.
+- Backlog items and technical debt the plan defers go to the project's tracker (Fintama: Jira, project SA), not into a backlog section of the plan.
 - (User preferences for plan location override this default.)
 
 ## The plan's weight follows the spec's class
@@ -378,7 +379,7 @@ Before suggesting merge of `<sub-branch>` into the feature branch:
 - [ ] If frontend was touched: Playwright end-to-end test exists that triggers the behavior FROM the GUI and asserts the back-end effect (front-to-back). Unit tests on the front-end alone are not sufficient.
 - [ ] No new `// @ts-ignore` / `// eslint-disable` in the diff
 - [ ] Project quality-bar gates (typecheck, lint, coverage thresholds, property tests, perf benchmarks per spec quality bar) green on the sub-branch
-- [ ] If the PR introduced a non-obvious decision: ADR file added under the project's ADR directory
+- [ ] If the PR introduced a non-obvious decision: the decision is recorded where it will be found: in a project with an architecture site, the "Why it is like this" block of the page it shaped (date · decision · rejected alternatives · spec link); otherwise an ADR under the project's ADR directory
 - [ ] CHANGELOG.md updated for any user-facing change
 - [ ] If the repo has `architecture/tools/impact.py`: `update-documentation` run — each page the diff touches updated or re-verified, `make architecture-check` green
 

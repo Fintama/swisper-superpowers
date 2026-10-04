@@ -197,7 +197,7 @@ This skill is the **enforcer at the per-PR merge gate** defined in `superpowers:
 
    Returns nothing.
 
-8. **ADR if non-obvious decision** — if the PR touched code at a project's "ADR-required" path (per the project's `check-adr-required.sh`), an ADR file is in the diff under the project's ADR directory and follows the project's template.
+8. **Decision record if non-obvious decision** — in a project with an architecture site, the "Why it is like this" block of the page the decision shaped (no ADR files). Otherwise: if the PR touched code at a project's "ADR-required" path (per the project's `check-adr-required.sh`), an ADR file is in the diff under the project's ADR directory and follows the project's template.
 
 9. **CHANGELOG updated for user-facing change** — for any user-facing change, the CHANGELOG.md diff includes the entry.
 

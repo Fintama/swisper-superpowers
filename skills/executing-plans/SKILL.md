@@ -118,7 +118,7 @@ Walk the merge-gate checklist in the plan and tick each box. The binding items (
 - All contracts the PR produces are exercised by at least one test from a consumer (or test fixture acting as a consumer) — not just isolated producer-side unit tests
 - If the PR diff includes any frontend file: a Playwright (or equivalent E2E) test exists that drives the browser AND asserts the back-end effect (front-to-back). Frontend unit tests against a mocked backend do NOT satisfy this.
 - No new `// @ts-ignore` / `// eslint-disable` in the diff (`git diff <feature-branch>...HEAD | grep -E '@ts-ignore|eslint-disable'` returns nothing)
-- If the PR introduced a non-obvious decision: ADR file added under the project's ADR directory
+- If the PR introduced a non-obvious decision: the decision is recorded where it will be found: in a project with an architecture site, the "Why it is like this" block of the page it shaped (date · decision · rejected alternatives · spec link); otherwise an ADR under the project's ADR directory
 - CHANGELOG.md updated for any user-facing change
 
 If any item is missing or unverified, address it before review.
@@ -144,7 +144,7 @@ Dispatch a separate maintainability-review subagent using the `requesting-code-r
 - **Public vs internal API discipline** — internal modules not importable from outside their package; public surface curated and TSDoc-documented
 - **Naming consistency** — terminology used the same way everywhere; canonical names from the project's glossary
 - **Dead code / debt markers** — no untyped escape hatches (`any`, `unknown` cast without narrowing); no `TODO` / `XXX` / `FIXME` left in production code without a tracked issue; no commented-out code blocks
-- **ADR debt** — non-obvious decisions documented as ADRs (per project convention); old ADRs marked superseded if the decision changed
+- **Decision debt** — non-obvious decisions recorded (architecture page "Why it is like this" block, or an ADR where the project keeps ADRs); a changed decision updates its record
 - **Cross-component drift** — contract names / shapes consistent with their authoritative source; no rename mismatches across files
 
 Apply the maintainability reviewer's High and Medium findings before proceeding. Low findings are recorded for follow-up but don't block the gate.
