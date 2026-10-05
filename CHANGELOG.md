@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-05
+
 ### Changed
 - **`update-documentation`: cite code by symbol** (Heiko, 2026-10-05: docs updates were far too slow). Python code is cited
   `path::Symbol`, never `file:line`; `covers.symbols` narrows the staleness gate to the functions a page explains;
@@ -288,6 +290,8 @@ publishes everything it has ever contained, not only its current tip.
   the gate, run by hand.
 
 ## [Unreleased]
+
+## [1.7.0] - 2026-10-05
 
 ### Added
 
