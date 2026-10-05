@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-05
+
 ### Changed
 - **Tests prove value, not volume** (Heiko, 2026-10-05: "I don't want useless tests … 15000 tests seem an
   overkill"). Measured on Foundry main: ~21,500 test cases, ~18% naming an AC, ~18k backend tests on every merge.
@@ -307,6 +309,8 @@ publishes everything it has ever contained, not only its current tip.
   the gate, run by hand.
 
 ## [Unreleased]
+
+## [1.8.0] - 2026-10-05
 
 ## [1.7.0] - 2026-10-05
 
