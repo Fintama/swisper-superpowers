@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-10-05
+
+### Fixed
+- `trace-check.sh`: `it.each(X)(` with the title on the next line (the shape biome formats long titles into) was reported as "title is not a string literal"; it is now read like a multi-line call. Two self-test cases cover it (red on 1.8.0, green now). Reported by Foundry WS9.
+
 ## [1.8.0] - 2026-10-05
 
 ### Changed
