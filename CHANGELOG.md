@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`update-documentation`: cite code by symbol** (Heiko, 2026-10-05: docs updates were far too slow). Python code is cited
+  `path::Symbol`, never `file:line`; `covers.symbols` narrows the staleness gate to the functions a page explains;
+  re-verifying a symbol anchor needs no re-counting; `FINDINGS.md` evidence stays `file:line` at `first_seen`; docs
+  are written once per (combined) PR at the end. Needs the architecture-site tooling from helvetiq #2544.
+
 ## [1.6.0] - 2026-10-04
 
 ### Changed

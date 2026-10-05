@@ -4,9 +4,9 @@ The binding sources are the approved spec (Swisper_Documentation `specs/swisper/
 
 ## Front matter (strict: these keys, nothing else)
 
-`id` (stable, never renumbered) · `title` · `subtitle` · `tag` (Overview | Design | Code | Runbook | Code map) · `chapter` · `covers` {paths, concepts, tables, routes, graphs, flags, jobs, workflows, mcp_tools} · `verified` {sha, date, by} — written by `gates.py verify`, never by hand · `assessment` {sound, flaw, robust, elegant, fast, extensible} · `findings` [ids] · `asks` (6 questions a reader would ask that the page answers).
+`id` (stable, never renumbered) · `title` · `subtitle` · `tag` (Overview | Design | Code | Runbook | Code map) · `chapter` · `covers` {paths, symbols, concepts, tables, routes, graphs, flags, jobs, workflows, mcp_tools} · `verified` {sha, date, by} — written by `gates.py verify`, never by hand · `assessment` {sound, flaw, robust, elegant, fast, extensible} · `findings` [ids] · `asks` (6 questions a reader would ask that the page answers).
 
-- `covers` drives both gates: list what the page explains, no more. A concept must exist in `architecture/concepts.yaml` and needs an Overview or Design page.
+- `covers` drives both gates: list what the page explains, no more. `symbols` (`path::Symbol`) narrows staleness to those functions; prefer it to a whole busy file in `paths`. A concept must exist in `architecture/concepts.yaml` and needs an Overview or Design page.
 - `assessment` answers start with a verdict word: `yes` / `no concern` (green), `partly` / `mostly` (amber), `no` (red), then the finding ids: `'partly · F-003'`. `flaw` is a finding id or `none`.
 
 ## Body, top to bottom
@@ -16,7 +16,7 @@ The binding sources are the approved spec (Swisper_Documentation `specs/swisper/
    - Hand-drawn SVG in the E.2 style: the `d-*` classes only, `currentColor`, no literal colours, labelled arrows, `role="img"` and an `aria-label` carrying the claim. `![[diagrams/<ch>/x.svg]]` on its own line, then `caption: <the claim>`.
    - Generated, never hand-drawn, when the code fully defines it: `{{graph: <name>}}`, `{{er: <slice>}}`, inventories.
    - Screenshot when the user's view explains best: `![[screenshots/<ch>/x.png]]`, then `caption:`, `captured: <date · source>`, `alt:`.
-3. **The pyramid.** Overview pages: plain words only; inline `code` only inside `::: dev`, no fenced code. Design pages: contracts, decisions and the rejected alternative, ownership, a rules grid (`:::: rules` / `::: rule <Title>` … `:::` / `::::`, optional `src:` line). Developer detail goes in the collapsed `::: dev` block: `file:line` anchors and the tests that pin them.
+3. **The pyramid.** Overview pages: plain words only; inline `code` only inside `::: dev`, no fenced code. Design pages: contracts, decisions and the rejected alternative, ownership, a rules grid (`:::: rules` / `::: rule <Title>` … `:::` / `::::`, optional `src:` line). Developer detail goes in the collapsed `::: dev` block: code anchors (`path::Symbol` for Python, `path:line` for TS and other files; SKILL.md §3a) and the tests that pin them.
 4. `{{findings}}` places the generated findings section. Cross-links: `[[2.5]]`, `[[2.5|text]]`, `[[F-031]]` — the build fails on a dangling one.
 
 ## Honest assessment and findings

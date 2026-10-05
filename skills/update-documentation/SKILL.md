@@ -28,7 +28,7 @@ make architecture-gates BASE=origin/<base>                              # comple
 | Verdict | When | Do |
 |---|---|---|
 | **UPDATE** | The PR changes something a reader relies on: a contract or API, the data model, a flow or sequence, ownership, a permission or security property, configuration, a flag or a default, a user-visible behaviour, a new concept or component | Edit the text, table or hand-drawn diagram. Re-read the rest of the page. Then verify. |
-| **RE-VERIFY ONLY** | Covered code changed and every statement is still true. The usual case for bug fixes, refactors, renames inside a unit, performance work, test-only changes | Re-read **every** claim against HEAD — prose, tables, captions, the rules grid's `src:` lines and the `::: dev` block's `file:line` anchors (refactors move lines; fix any that moved). Leave `FINDINGS.md` evidence alone: it is pinned to `first_seen`. Then verify. |
+| **RE-VERIFY ONLY** | Covered code changed and every statement is still true. The usual case for bug fixes, refactors, renames inside a unit, performance work, test-only changes | Re-read **every** claim against HEAD — prose, tables, captions, the rules grid's `src:` lines and the `::: dev` block's anchors. A symbol anchor (`path::Symbol`) needs only "does it still exist and do what the text says"; a line anchor that moved is fixed by turning it into a symbol anchor (§3a). Leave `FINDINGS.md` evidence alone: it is pinned to `first_seen`. Then verify. |
 | **NEW PAGE** | A genuinely new component or concept the outline lacks | Write it to the standard (§3). A new route, table or field is **not** a new page: add it to the `covers:` of the page that explains it. |
 | **NOTHING** | No page covers the change, no page states anything it changed (grep), no new inventory item | Say so in the PR, with the evidence. |
 
@@ -51,9 +51,18 @@ make architecture-gates BASE=origin/<base>                              # comple
 | "Verify edits the page and needs the deps install" | Editing the page is the point. `uv run python gates.py verify <id>` skips the npm and model fetch. |
 | "Bump `verified` now, docs in a follow-up PR" | A stamp on a false page is the worst state: it looks checked. Fix it in this PR. |
 | "impact.py says 0 pages, docs done" | It only reads `covers:`. Grep the pages for what you changed. |
-| "A refactor has nothing to document" | Usually true for the prose. The `::: dev` anchors are claims at `verified.sha`; moved lines make them false. |
+| "A refactor has nothing to document" | Usually true for the prose. Line anchors are claims at `verified.sha` and moved lines make them false; symbol anchors survive a refactor, which is why new ones are symbols. |
+| "I'll cite `file:line`, it is quicker" | It breaks on the next edit and costs a re-anchor on every PR after. Python code is cited `path::Symbol`; the build links it and fails if it does not resolve. |
 | "Lines moved, so I re-anchor the findings' evidence too" | Evidence is `file:line` **at `first_seen`**. Re-anchoring it to HEAD breaks the record. Only page anchors follow HEAD. |
 | "I edited one line, the gate is satisfied" | Any edit clears the staleness gate for the whole page. If covered code changed, re-read all of it and verify. |
+
+## 3a · Citing code (since 2026-10-05)
+
+1. **Python code is cited by symbol, never by line:** `apps/backend/swisper/gateways/llm/adapter.py::SwisperLLMAdapter._events` (path from the repo root, `::`, class and member). The build turns it into a link to the right lines and `make architecture-check` fails if it does not resolve. Fix the anchor; never fall back to a line number. TS/TSX and non-code files keep `path:line`.
+2. **List what the page explains, not the whole file.** When a page explains a few functions in a busy file, put them in `covers.symbols` instead of the file in `covers.paths`. The staleness gate then flags the page only when one of those functions changes (comments and formatting do not count). Keep `covers.paths` for a page that really describes a whole file or folder.
+3. **Re-verifying a symbol anchor** means checking the symbol still exists and does what the text says. Nothing to re-count.
+4. **`FINDINGS.md` evidence stays `file:line` at `first_seen`.** It is a pinned record; a symbol would re-link it to HEAD.
+5. **Touching an old line anchor?** Convert it to a symbol anchor in the same edit. Docs are written once per (combined) PR, at the end, after the code is final, not per fix round.
 
 ## 3 · Write to the standard
 
