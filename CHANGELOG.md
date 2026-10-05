@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.2] - 2026-10-05
+
+### Fixed
+- `trace-check.sh` could report a **false PASS**. A `test.each` table it could not close (`] as const)(`, or the title on the line after `])(`) swallowed every later test in the file, so an untraced `it(...)` after it was never seen. Now a table closes on any `)(`, a title on the next line is read, a new test head while a table is open records the table as unreadable (untraced) and is itself scanned, and a table still open at file end is counted. Four self-test cases cover it, all red on 1.8.1. Reported by Foundry WS7.
+
 ## [1.8.1] - 2026-10-05
 
 ### Fixed

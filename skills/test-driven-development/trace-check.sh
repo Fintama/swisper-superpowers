@@ -7,7 +7,7 @@
 # name none is not written. This script is the mechanical half of that rule.
 #
 #   usage:  trace-check.sh [RANGE]        RANGE defaults to origin/main...HEAD
-#           trace-check.sh --self-test    positive control: 17 fixture diffs, red and green
+#           trace-check.sh --self-test    positive control: 24 fixture diffs, red and green
 #
 #   exit 0  every new test case is traced (or allowed, with a reason)
 #   exit 1  at least one new test case is untraced — each is listed
@@ -60,6 +60,11 @@ if [ "${1:-}" = "--self-test" ]; then
     expect 0 1 "test.each table, traced title"   i.test.ts "$(printf "test.each([\n  [1, 2],\n])('B-AC-3: adds %%s', f)")"
     expect 1 1 "it.each(X)( title on next line, untraced" m.test.ts "$(printf "it.each(cases)(\n  'adds %%s',\n  f)")"
     expect 0 1 "it.each(X)( title on next line, traced"   n.test.ts "$(printf "it.each(cases)(\n  'B-AC-3: adds %%s',\n  f)")"
+    expect 0 1 "test.each [...] as const table, traced"   o.test.ts "$(printf "test.each([\n  [1, 2],\n] as const)('B-AC-3: adds %%s', f)")"
+    expect 1 1 "test.each [...] as const table, untraced" p.test.ts "$(printf "test.each([\n  [1, 2],\n] as const)('adds %%s', f)")"
+    expect 0 1 "test.each table, title on line after ])(" q.test.ts "$(printf "test.each([\n  [1, 2],\n])(\n  'B-AC-3: adds %%s',\n  f)")"
+    # A table the parser cannot close must never swallow the tests after it (a false PASS).
+    expect 1 2 "unreadable table does not hide a later untraced test" r.test.ts "$(printf "test.each(\n  makeRows(\n    1,\n  ) satisfies Row[],\n)\n('B-AC-3: adds %%s', f)\nit('renders the page', f)")"
     expect 1 1 "it.each template table, untraced" l.test.ts "$(printf "it.each\`\n  a | b\n  \${1} | \${2}\n\`('adds \$a', f)")"
     expect 0 0 "removing a test is not adding one" b.test.ts ""
     expect 0 0 "non-test file is ignored"        src/x.ts "it('not a test file', f)"
@@ -124,7 +129,7 @@ function record(kind, file, ln, title, prev,   r) {
     if (title == "") title = "<title is not a string literal — cannot be read>"
     printf "UNTRACED   %s:%d  %s\n", file, ln, title
 }
-/^diff --git / { file = ""; pend = ""; next }
+/^diff --git / { if (pend != "" && file != "") record(pend_sign, file, pend_ln, "", pend_prev); file = ""; pend = ""; next }
 /^--- / { old = substr($0, 5); sub(/^a\//, "", old); next }
 /^\+\+\+ / { f = substr($0, 5); if (f == "/dev/null") f = old; sub(/^b\//, "", f); file = is_test_file(f) ? f : ""; next }
 /^@@ / { split($0, h, " "); n = h[3]; sub(/^\+/, "", n); split(n, nn, ","); ln = nn[1] + 0; prev_add = ""; next }
@@ -132,11 +137,20 @@ file == "" { next }
 /^[+-]/ {
     sign = substr($0, 1, 1); s = substr($0, 2); cur_line = s
     # title of a head seen on the previous line (multi-line call, or .each table)
+    if (pend == "each" && sign == pend_sign && js_head(s)) {
+        # A new test began while a table was still open: the title of the table could not be
+        # read. Count it (as untraced) and scan this line normally — never swallow it.
+        record(sign, file, pend_ln, "", pend_prev); pend = ""
+    }
     if (pend != "" && sign == pend_sign) {
-        t = ""
-        if (pend == "call") t = first_literal(s)
-        else if (s ~ /^[ \t]*(\]?[ \t]*\)|`)[ \t]*\(/) { x = s; sub(/^[ \t]*(\]?[ \t]*\)|`)[ \t]*\(/, "", x); t = first_literal(x) }
-        if (t != "" || pend == "call") { record(sign, file, pend_ln, t, pend_prev); pend = "" }
+        if (pend == "call") { record(sign, file, pend_ln, first_literal(s), pend_prev); pend = "" }
+        else if (match(s, /\)[ \t]*\(/) || match(s, /`[ \t]*\(/)) {
+            # the table closes: `])(`, `] as const)(`, `X)(`, or the template form
+            rest = substr(s, RSTART + RLENGTH)
+            if (rest ~ /^[ \t]*$/) pend = "call"          # title on the next line
+            else { record(sign, file, pend_ln, first_literal(rest), pend_prev); pend = "" }
+        }
+        else if (++pend_n > 80) { record(sign, file, pend_ln, "", pend_prev); pend = "" }  # give up, counted
         if (sign == "+") { prev_add = s; ln++ }
         next
     }
@@ -150,7 +164,7 @@ file == "" { next }
                 if (rest ~ /^[ \t]*$/) { pend = "call"; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
                 else record(sign, file, ln, first_literal(rest), prev_add)
             }
-            else { pend = "each"; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
+            else { pend = "each"; pend_n = 0; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
         } else {
             sub(/^\(/, "", x)
             if (x ~ /^[ \t]*$/) { pend = "call"; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
@@ -164,6 +178,7 @@ file == "" { next }
     next
 }
 END {
+    if (pend != "" && file != "") record(pend_sign, file, pend_ln, "", pend_prev)
     printf "\ntrace-check: %d test case(s) added, %d removed (net %+d) · %d traced · %d allowed · %d untraced\n", added, removed, added - removed, ok, allowed, bad
     if (bad > 0) {
         print "FAIL — each test above must name what it proves in its title: an AC id (B-AC-n / T-AC-n /"
