@@ -415,10 +415,11 @@ BEFORE labeling a frontend unit test as verifying a B-AC-N:
     STOP — this verifies frontend rendering, not the business AC
     Add a Playwright (or equivalent) front-to-back E2E that drives the browser
     AND asserts the back-end effect
-    Re-label this test as a frontend-only behavior test (T-AC-N or unlabelled)
+    Then DELETE the mocked test — unless it proves a different id (a UI rule
+    the browser test cannot reach). An unlabelled test is not an option.
 ```
 
-**The fix:** keep the frontend unit test (it has value for fast iteration on UI logic), but the merge gate's B-AC verification is a Playwright front-to-back E2E that exercises the real contract:
+**The fix:** the B-AC is proved by a Playwright front-to-back test that exercises the real contract, and the mocked unit test goes in the same PR:
 
 ```typescript
 // ✅ GOOD: front-to-back; tests the real contract
@@ -453,6 +454,38 @@ Result: tests like
 - The team learns "coverage = checkbox" instead of "coverage = signal"
 
 **The fix:** coverage is a regression-floor, not a target. Run mutation testing on critical code (Stryker) to verify tests would catch real bugs. If TDD-driven coverage is far below the floor, that's a signal of skipped tests OR hard-to-reach branches that suggest design problems — not a "raise the number" project.
+
+## Anti-Pattern 11: The Untraced Unit Test (the shadow)
+
+**The violation:**
+```typescript
+// tests/orders.test.mjs — the AC test, at the route
+test('B-AC-1: gold customer at the 100.00 threshold gets GOLD10, and reads it back', …);
+
+// tests/pricing.test.mjs — the same rule again, one level down, naming nothing
+test('pricing: gold tier gets GOLD10 at exactly the 100.00 threshold', …);
+test('spec §4: roundTo05 rounds up to the nearest 0.05 CHF', …);
+test('POST /orders calls store.save exactly once', …);
+```
+
+**Why this is wrong:**
+- The second test proves what the first already proves — twice the run cost on every merge, forever, for one proof
+- It names a place ("pricing:", "spec §4") instead of a promise, so nobody can tell which AC breaks when it goes red
+- The mock-count test passes while the order is saved with the wrong total
+- Measured 2026-10-05: agents under the old pyramid wrote 11 such tests beside 7 route tests for one route, and answered three review findings with 8 more — 0 strengthened, 0 deleted
+
+### Gate Function
+
+```
+BEFORE writing a test below the boundary:
+  Name its id (AC / INV / FM). None → don't write it.
+  Does a boundary test already exercise this case? → strengthen THAT test.
+  Is this a pure core with too many combinations for the boundary?
+    → ONE table-driven or property test, titled with the AC it serves.
+  Otherwise → it belongs at the boundary.
+```
+
+**The fix:** add the threshold and rounding cases as rows of the B-AC-1 route test's table; delete the shadows.
 
 ## When Mocks Become Too Complex
 
@@ -491,6 +524,7 @@ Result: tests like
 | Test-only env vars in production | Dependency-inject; fakes in tests, real in prod |
 | Frontend unit as B-AC substitute | Playwright front-to-back asserting back-end effect |
 | Coverage as goal | Coverage is outcome; mutation-test critical code |
+| Untraced / shadow unit test | Name the id or delete; strengthen the boundary test's table |
 
 ## Red Flags
 
@@ -500,6 +534,7 @@ Result: tests like
 - Test fails when you remove mock
 - Can't explain why mock is needed
 - Mocking "just to be safe"
+- A test title with no AC / INV / FM id
 
 ## The Bottom Line
 

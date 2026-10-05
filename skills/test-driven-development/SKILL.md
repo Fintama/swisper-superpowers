@@ -11,20 +11,15 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
 
+**And the test you watch fail must prove a promise.** A test that proves no acceptance criterion, invariant or documented failure mode is not written — however fast, however green.
+
 **Violating the letter of the rules is violating the spirit of the rules.**
 
 ## When to Use
 
-**Always:**
-- New features
-- Bug fixes
-- Refactoring
-- Behavior changes
+**Always:** new features, bug fixes, refactoring, behaviour changes.
 
-**Exceptions (ask your human partner):**
-- Throwaway prototypes
-- Generated code
-- Configuration files
+**Exceptions (ask your human partner):** throwaway prototypes, generated code, configuration files.
 
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
@@ -36,146 +31,56 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 
 Write code before the test? Delete it. Start over.
 
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
+**No exceptions:** don't keep it as "reference", don't "adapt" it while writing tests, don't look at it. Delete means delete. Implement fresh from tests.
 
-Implement fresh from tests. Period.
+## Tests prove promises — the rules that decide WHICH tests exist
+
+*Measured 2026-10-05, Foundry main: **~21,500 test cases** (backend 15,624, frontend 5,669 + 227 Playwright), and **only ~18% name the AC they prove**. Every merge to main runs ~18,000 backend tests. Earlier, 2026-07-29: **7,800 tests green and four user-visible bugs found by clicking** — the tests asserted the mechanism, nobody asserted the promise. Volume bought neither speed nor safety. The CTO's ruling: tests prove that the business value is delivered and that the system works; no useless unit tests.*
+
+**R1 — A test proves a promise, at the altitude where it is received.** The default test asserts an acceptance criterion where the user or client receives it: the route/API response, the rendered UI, the persisted state the next step reads. Never on the function that computes it. **Read [`proving-acs.md`](proving-acs.md) before writing any test** — it is the method, not an appendix.
+
+**R2 — The title names what the test proves** (this is the **AC-ID test naming** rule, widened): an AC id (`B-AC-n`, `T-AC-n`, `UBER-AC-n`), an invariant id (`INV-x`, `I-n`), or a documented failure mode (`FM-x`, or the spec's own error id; a bug is `FM-<ticket>`). **A test that can name none is not written. If it exists, delete it.** "spec §4", "pricing:", "edge case", "coverage" are not ids.
+
+```typescript
+test('B-AC-1: a gold customer is charged 108 for a 120 CHF order, and reads 108 back', …);  // ✅ promise, route
+test('FM-1: an unknown coupon is refused with 422 COUPON_UNKNOWN and nothing is stored', …); // ✅ failure mode
+test('INV-1: 0 <= total <= subtotal for 500 generated orders', …);                            // ✅ invariant
+test('loyaltyDiscount returns GOLD10 above threshold', …);  // ❌ names no promise; B-AC-1 already proves it
+```
+
+**R3 — Unit tests are the exception.** A test below the boundary is allowed only for:
+- **(a)** a pure functional core with real branching, where proving it from the boundary would need many combinations — then **one table-driven or property test**, titled with the AC it serves, never N copies;
+- **(b)** an invariant — a property test (`INV-x`);
+- **(c)** a documented failure mode that is hard to reach from the boundary (`FM-x`).
+
+**Never for:** getters, glue, wiring, mock-call counts, "it calls X", framework behaviour, re-asserting a value the code just computed, constants, source-text greps, "removed symbol stays removed", shape-only checks (`'code' in d`, `typeof f === 'function'`).
+
+**R4 — Value-first, not a pyramid.** Few, high-signal tests. **Write the AC test at the boundary first. Descend a level only when the boundary cannot reach the case** — and then only under R3. The old pyramid ("many fast unit tests at the base", "most technical ACs are unit tests") **does not apply here**: measured 2026-10-05, it is how one pricing route arrived with 18 tests: 7 at the route, 11 unit tests naming no promise, at least 5 of them re-proving what the route tests already proved.
+
+**Choosing where a test goes:**
+
+1. Which promise is this — AC, invariant or failure mode? None → stop; do not write it.
+2. Does an existing test already prove it? → **strengthen that test** (R6). Check first: `prism search "B-AC-1"` / `prism find-refs "<symbol>"` in indexed repos, otherwise grep.
+3. Can the boundary (route, rendered UI, persisted state) reach the case? → write it there. A business AC touching the frontend needs a real-browser, front-to-back test (see `proving-acs.md`).
+4. The boundary cannot reach it, or would need dozens of combinations → one table or property test under R3, titled with its id.
+
+**R5 — The plan names the tests.** One per AC, plus the invariants and failure modes the plan lists. You may add a test beyond the plan's list only by naming what it proves (R2) in the commit message and in your report.
+
+**R6 — Strengthen before you add.** A review finding or a surviving mutant is fixed by **strengthening an existing test's assertion first** — add the boundary value as a row of the AC's table, add the missing assertion to the AC test. A new test only when no existing test sits at the right altitude, and it still carries an R2 id.
+
+**R7 — Deletion is part of the job.** When a higher-altitude test now covers a behaviour, delete the lower tests for it **in the same PR**. Every report lists tests **added, strengthened and deleted**; net growth is explained per PR.
+
+**R8 — `trace-check.sh` is the mechanical half of R2.** Bundled here: `trace-check.sh <range>` lists every NEW test case (vitest/jest/node:test/Playwright `it(`/`test(`, pytest `def test_`) whose title carries no AC/INV/FM id, prints added/removed/net, and exits 1 when any is untraced. The escape is a `trace-allow: <reason>` comment on or above the test (≥10 characters; printed in the output, so review sees it). `trace-check.sh --self-test` is its positive control. Run it before reporting DONE; quote its summary line in the report.
+
+```bash
+bash skills/test-driven-development/trace-check.sh origin/main...HEAD   # in a project: copy it to scripts/
+```
+
+**Wiring it into a project's CI** (one job, on pull requests): check out with `fetch-depth: 0`, then `bash scripts/trace-check.sh "origin/${{ github.base_ref }}...HEAD"`. It needs bash, git and awk — nothing to install. Extra id shapes for one project: `TRACE_CHECK_ID_RE='SA-[0-9]+'`. It reads **new** tests only, so a legacy suite does not block day one; existing untraced tests are deleted or renamed as PRs touch them (R7).
 
 ## TDD Evidence (binding when working from a plan)
 
-When working from a plan with per-PR merge gates, TDD is verified by **commit history**, not by claim:
-
-- The failing-test commit MUST precede the passing-test commit
-- `git log -p` over the PR's diff must show this order
-- A reviewer or merge-gate check that finds tests added in the same commit as (or after) the implementation flags it as a TDD violation
-
-This is non-negotiable. Pre-PR tooling can audit it (`git log --diff-filter=A` for new test files; verify each test's first-passing commit was preceded by a first-failing commit). At minimum, the implementer reports the failing-commit SHA + passing-commit SHA in their handoff report.
-
-## AC-ID test naming (binding when verifying spec ACs)
-
-If the task verifies any acceptance criterion with an ID (B-AC-N for business / T-AC-N for technical, per `superpowers:brainstorming` and `superpowers:writing-plans` discipline), the test name MUST include the AC ID verbatim:
-
-```typescript
-// ✅ correct — AC ID in name; review tooling can grep for coverage
-test('T-AC-9: healthz returns 200 with body { status: "ok" }', () => { ... });
-test('B-AC-1: existing chat workflow still works after Polis loaded', () => { ... });
-
-// ❌ wrong — descriptive but disconnected from the spec
-test('healthz responds with the right body', () => { ... });
-test('chat works', () => { ... });
-```
-
-Each AC gets at least one test. The test asserts the AC's Then-clause condition with real data, not against mocks of the system under test.
-
-⚠ **The AC ID in the name is a LABEL, NOT PROOF — read [`proving-acs.md`](proving-acs.md) before writing any AC-mapped test.**
-
-Measured, Foundry 2026-07-29: a feature shipped with **7,800 tests green** and a UAT session found **four bugs by clicking**. Every one was *the code doing exactly what it said while saying something false to the user* — `billedTo` announced "the instance API key" for a plan paid by a personal subscription; a real Max session was reported as an API key; a consent dialog rendered off the bottom of the viewport with its instruction pointing off-screen. The tests asserted the **mechanism**. The ACs promised something to a **person**. Nobody tested the promise.
-
-The rule that follows: **a B-AC's assertion belongs on the artefact the user receives** — rendered text, the response a client actually consumes, the state the next screen reads — never on the function that computes it. And the expected value is derived from **arranged ground truth**, never from the string the code produces; asserting the code's own claim freezes the bug (it would go green on the break and red on the fix).
-
-The gate question, which would have caught all four: **could this test pass while the user is told something false?** If yes, the test is one altitude too low.
-
-## Test value: traceability over volume (anti-bloat)
-
-More tests is not better. The goal is the **minimum set of high-signal tests** that proves the ACs and their important edge/failure cases. Every test must trace to one of:
-
-- an **AC** (B-AC-N / T-AC-N) — proves a specified slice of business/technical value,
-- a **spec invariant** (property test), or
-- a **documented failure mode** (one negative-path test per documented error).
-
-A test that traces to none of these is bloat — don't write it; if it already exists, delete it. Trivial getter/setter tests, tests that assert the framework/library works, and N near-identical tests for one behavior all fail this rule. (Coverage is an *outcome* of this set, never a target — see "Coverage as outcome" below. AC leanness is enforced upstream by `superpowers:brainstorming`; this is the implementation-side counterpart.)
-
-**Before writing a test, check it doesn't already exist.** The AC-ID naming convention makes existing coverage searchable. In prism-indexed repos:
-- `prism search "T-AC-9"` — is this AC already tested?
-- `prism find-refs "<functionUnderTest>"` — existing tests that exercise this symbol (test files show up in the refs).
-- `prism search "<behavior phrase>"` — semantically similar existing tests.
-
-If a test already covers the behavior, **extend/strengthen it rather than add a near-duplicate**. (Non-prism repos: Grep/Read.)
-
-## Choosing the test level (the test pyramid)
-
-The test pyramid still holds in 2026: many fast unit tests at the base, fewer integration tests in the middle, a small number of E2E / browser tests at the top. Speed and isolation buy fast feedback; coverage of integration concerns buys confidence.
-
-| Level | What it tests | When to use | Example |
-|---|---|---|---|
-| **Unit** | One function / class in isolation; no I/O | Pure logic, branch coverage, edge cases. Most technical ACs. | A capability resolver maps `(model, params)` → compatible params. |
-| **Property** | An invariant across generated inputs | Domain invariants (Polis-bar I1–I5). Code that must hold across input space. | "Every `delegate(Task)` produces exactly one `Result`" — proven across 100+ generated Tasks. |
-| **Contract** | A producer / consumer agree on a wire format | Wherever components communicate (HTTP, SSE, MQ, plugin hooks, DB schema) | Polis SDK calls `/healthz`; response matches `HealthzResponse` shape. |
-| **Integration** | A flow through 2+ real components, external systems faked or containerized | Business ACs that don't need a browser; cross-component glue | Lead session calls `delegate` → child OpenCode session spawns → typed Result returned. |
-| **E2E** | A user flow through the full stack including the GUI | Business ACs with a UI; "Playwright touched" merge-gate items | User opens the Foundry chat, sends a message, sees a reply, DB record persisted. |
-
-Mapping for our PDLC:
-
-- **Business ACs (B-AC-N)** → integration or E2E. If frontend is touched, the merge gate **requires** Playwright E2E. Frontend unit tests against a mocked backend do NOT satisfy a business AC.
-- **Technical ACs (T-AC-N)** → unit, contract, or CI-step tests.
-- **Invariants (I1–I5 in Polis-bar)** → property-based tests via fast-check.
-- **Performance non-functional requirements** → benchmark tests compared to a committed baseline (regression check, not assertion).
-
-If you cannot place the test cleanly at one level, the design is probably mixing concerns. Apply Functional Core / Imperative Shell (below).
-
-## Test tiers and the fast inner loop
-
-A suite that runs slowly gets run rarely — the opposite of TDD. Two rules keep the inner loop fast without losing coverage.
-
-**1. During the loop, run targeted tests — never the whole suite.** After each RED→GREEN cycle run exactly:
-- **every new test you are writing this task** — pass their paths explicitly, AND
-- **the relevant previous tests** — the existing tests that cover the module you're changing. **You know which these are** (the tests for that module/feature); pass their paths too, AND
-- **the fast core smoke set** (the "is the app fundamentally broken" safety net — the runner appends it automatically).
-
-So the everyday command is `test:dev <the test files relevant to this task>` → those + core, in seconds.
-
-**Do not lean on `vitest related` to compute relevance in a well-connected codebase.** `related` walks the *transitive* import graph, so in a codebase where most code transitively imports a shared service/resolver layer, `related <a core file>` selects most of the suite (measured: a module with 2 direct importers pulled 257 files). Treat `related` as a "show me the blast radius before I push" check, not an every-cycle tool — for the loop, name the handful of test files you actually care about. The full suite is a merge-gate concern (CI), not an every-task concern; running everything after every task is the single most common cause of a slow, resented TDD loop. Use the project's inner-loop runner (a persistent-shared-services dev script that brings the DB up once and stays up), not one that boots/tears down containers each invocation.
-
-**2. Assign every test a tier at creation time.** Tiers let the inner loop, the required CI gate, and a non-blocking slow lane each select the right subset:
-
-| Tier | What goes here | Runs |
-|---|---|---|
-| **core** | A *small* set of fast, behavioral tests guarding fundamental invariants ("is the app fundamentally broken"). | Inner loop, constantly. |
-| **gate** | Default. Unit + critical integration proving the ACs. Must be green to merge. | Required CI check + local default. |
-| **extended** | Genuinely slow AND not needed on every PR (full boot-to-e2e, long multi-step flows). Coverage preserved, off the PR critical path. | Non-blocking lane (push-to-main / nightly / manual). |
-
-**Classification decision, made when you create the test:**
-1. Is it **behavioral** (asserts the OUTPUT of a function/route/flow)? If no — a shape check, a `toBeDefined`-only structural check, or a regex over a static prompt/config constant — **don't write it** (see anti-bloat above + `testing-anti-patterns.md`).
-2. Is it **genuinely slow** (real browser, real subprocess, long multi-step flow)? → **extended**.
-3. Otherwise → **gate** (the default).
-4. Additionally, if it's **fast AND guards a fundamental invariant everything depends on** → also add it to the **core** smoke set.
-
-Keep core small — if everything is core, nothing is. The concrete selector is project-defined — follow the project's convention (e.g. Foundry: `extended` = `*.extended.test.ts` filename suffix; `core` = the `tests/core.txt` manifest; `gate` = everything else — see `backend/tests/TIERS.md`). This tiering is the runtime counterpart to the anti-bloat rule above: anti-bloat controls *how many* tests exist; tiering controls *which run when*.
-
-## Functional Core, Imperative Shell — design for testability
-
-**This is the design pattern that makes TDD viable in real codebases.** If you find yourself fighting to test something, the architecture is wrong, not the test.
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ Imperative Shell                                             │
-│ I/O, side effects, non-determinism                           │
-│ - HTTP calls, DB queries, file system, time, randomness      │
-│ - Adapters / repositories / providers                         │
-│ - Tested with INTEGRATION tests (real I/O, faked external)    │
-└─────────────────────────┬────────────────────────────────────┘
-                          │ data in / data out
-                          ▼
-┌──────────────────────────────────────────────────────────────┐
-│ Functional Core                                              │
-│ Pure logic — input → output, no I/O, no state                │
-│ - Domain rules, validation, transformation, decisions         │
-│ - Tested with UNIT tests, no mocks needed                     │
-│ - Property-tested for invariants                              │
-└──────────────────────────────────────────────────────────────┘
-```
-
-Examples:
-
-- A capability resolver `(model, params) → compatible params` — pure function, unit-testable
-- A reducer `(state, event) → newState` for a lifecycle FSM — pure, property-testable for invariants
-- An auth header parser `string → { user, scopes } | error` — pure, unit-testable
-- An HTTP server route `(request) → response` that delegates to a pure handler — the route is shell, the handler is core
-
-**Heuristic:** if a unit test must mock more than one collaborator, the function under test is in the wrong layer. Push pure logic into the core; thin the shell.
+TDD is verified by **commit history**, not by claim: the failing-test commit precedes the passing-test commit, and `git log -p` over the PR shows it. Tests added in the same commit as the implementation, or after it, are a TDD violation. The implementer reports both SHAs.
 
 ## Red-Green-Refactor
 
@@ -203,81 +108,53 @@ digraph tdd_cycle {
 
 ### RED — Write Failing Test
 
-**Before writing the body, name the break.** What production change should make this test fail — and is that change a *bug* or a *decision*? Cannot name one → the test proves nothing; redesign it around an observable behavior. "The constant changed" / "the wording changed" → that is a **change detector**: it fires on every intentional redesign and sleeps through real bugs. Test the behavior that depends on the decision — not `expect(MAX_RETRIES).toBe(5)`, but "a failing call is retried 5 times and the 6th never happens."
+**Before writing the body, name the break.** What production change should make this test fail — and is that change a *bug* or a *decision*? Cannot name one → the test proves nothing. "The constant changed" / "the wording changed" → a **change detector**: it fires on every intentional redesign and sleeps through real bugs. Not `expect(MAX_RETRIES).toBe(5)`, but "a failing call is retried 5 times and the 6th never happens."
 
-**Derive the expected value independently.** An expectation computed by the code under test — or by its helpers — passes no matter what that code does:
+**Derive the expected value independently** — a literal, or ground truth the test arranged. An expectation computed by the code under test, or by its helpers, passes no matter what that code does:
 
 ```typescript
-// ❌ Mirror assertion: the same builder computes both sides — always true
-const expected = buildSearchQuery({ tag: 'urgent' });
-expect(buildSearchQuery({ tag: 'urgent' })).toBe(expected);
-
+// ❌ Mirror: the same builder computes both sides — always true
+expect(buildSearchQuery({ tag: 'urgent' })).toBe(buildSearchQuery({ tag: 'urgent' }));
 // ✅ Hand-derived literal
 expect(buildSearchQuery({ tag: 'urgent' })).toBe('tag:"urgent"');
 ```
 
-**Test your code, not the framework.** Assert the contract your code makes at its boundaries — the route you register, the query you emit, the payload you produce. Upstream mechanics are their maintainers' tests (the classic: asserting your router invokes a registered handler). Where upstream behavior genuinely surprised you, write one narrow characterization test that names the assumption.
+**Test your code, not the framework.** Assert the contract your code makes at its boundary. Where upstream behaviour genuinely surprised you, one narrow characterization test that names the assumption — with a `trace-allow:` reason.
 
-Write one minimal test showing what should happen. **Use Arrange-Act-Assert (AAA) structure** for readability — three sections separated by blank lines:
+One behaviour per test, Arrange-Act-Assert visible, real code rather than mocks of the system under test:
 
 ```typescript
-test('T-AC-9: healthz returns 200 with body { status: "ok" }', async () => {
-  // Arrange
-  process.env.POLIS_SHARED_SECRET = 'test-secret';
-  const app = createApp();
+test('B-AC-2: an expired coupon is refused with 422 COUPON_EXPIRED and nothing is stored', async () => {
+  const store = createStore();
+  const handle = createApp({ store, clock: () => new Date('2026-10-05T12:00:00Z') });
 
-  // Act
-  const res = await app.request('/api/polis/v1/healthz');
+  const res = await handle({ method: 'POST', path: '/orders',
+    body: { customerId: 'c_plain', items: [{ sku: 'A', qty: 1, unitPrice: 50 }], coupon: 'SUMMER20' } });
 
-  // Assert
-  expect(res.status).toBe(200);
-  const body = await res.json();
-  expect(body).toMatchObject({ status: 'ok', version: expect.any(String) });
+  assert.equal(res.status, 422);
+  assert.deepEqual(res.body, { error: 'COUPON_EXPIRED' });
+  assert.equal(store.count(), 0);   // the promise includes "nothing is stored"
 });
 ```
-
-**Requirements:**
-- One behavior per test
-- Clear name (AC ID if applicable)
-- Real code, not mocks of the system under test
-- AAA structure (visible in code, not necessarily commented)
 
 <Bad>
 ```typescript
 test('retry works', async () => {
-  const mock = jest.fn()
-    .mockRejectedValueOnce(new Error())
-    .mockRejectedValueOnce(new Error())
-    .mockResolvedValueOnce('success');
+  const mock = jest.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce('ok');
   await retryOperation(mock);
-  expect(mock).toHaveBeenCalledTimes(3);
+  expect(mock).toHaveBeenCalledTimes(2);
 });
 ```
-Vague name, tests mock not code, no AC traceability.
+Names no promise, asserts the mock's call count, not what the caller receives.
 </Bad>
 
 ### Verify RED — Watch It Fail
 
-**MANDATORY. Never skip.**
+**MANDATORY. Never skip.** Run the single test. Confirm it **fails** (does not error), with the expected message, because the feature is missing.
 
-```bash
-bun test path/to/test.test.ts        # or npm/pnpm/yarn test
-```
+**Test passes immediately?** You're testing existing behaviour — or the behaviour is already proved, and this test should be a strengthened assertion on the existing one (R6).
 
-Confirm:
-- Test fails (does not error)
-- Failure message is the expected one
-- Fails because the feature is missing, not because of a typo, missing import, or bad fixture
-
-**Test passes immediately?** You're testing existing behavior. Fix the test or you have nothing.
-
-**Test errors (not fails)?** Fix the error and re-run until it fails for the right reason.
-
-**When the error is "the thing doesn't exist yet" — stub it, don't implement it.**
-
-The common case: your test imports a module that isn't written, so the file won't even load. That is an *error*, not a RED, and the usual escapes are both wrong — deleting the import tests nothing, and writing enough implementation to make it load has already left RED behind.
-
-Write a **minimal stub from the declared interface** — typed signature, and a body that does nothing but announce itself:
+**When the error is "the thing doesn't exist yet" — stub it, don't implement it.** A test whose import fails is an *error*, not a RED. Write a minimal stub from the declared interface whose body only announces itself:
 
 ```ts
 export function resolvePhase(id: string): PhaseRef {
@@ -285,427 +162,143 @@ export function resolvePhase(id: string): PhaseRef {
 }
 ```
 
-Now the file loads and the test fails **on its assertion**, which is the only failure that proves anything. Two rules keep the stub honest:
-
-- **The body is the throw and nothing else.** One `if`, one default return, one early guard — and you have started implementing during RED, with no failing test to justify it.
-- **Name what is missing.** `NotImplemented: <interface-id>` is greppable and tells the next reader exactly which contract is unbuilt. An accepted RED outcome is *either* an assertion failure *or* this — never a load, syntax or import error, which always means your test is broken rather than the feature missing.
-
-*Adopted from Foundry's QA-lock discipline, where the same rule is enforced on an agent that authors acceptance tests implementation-blind: a test that passes before the implementation exists is testing existing behaviour or nothing.*
+The body is the throw and nothing else — one `if` or default return and you are implementing during RED. An accepted RED is an assertion failure or this `NotImplemented`, never a load, syntax or import error. *(Adopted from Foundry's QA-lock discipline: a test that passes before the implementation exists is testing existing behaviour or nothing.)*
 
 ### GREEN — Minimal Code
 
-Write the simplest code that makes the test pass.
-
-```typescript
-app.get('/api/polis/v1/healthz', (c) => {
-  return c.json({ status: 'ok', version: VERSION, uptime_seconds: 0 }, 200);
-});
-```
-
-Don't add features, refactor other code, or "improve" beyond the test. YAGNI.
+The simplest code that makes the test pass. Don't add features, refactor other code, or "improve" beyond the test. YAGNI.
 
 ### Verify GREEN — Watch It Pass
 
-**MANDATORY.**
-
-```bash
-# Run the tests for the code you changed + the fast core set — NOT the whole
-# suite (see "Test tiers and the fast inner loop"). Use the project's
-# persistent-DB inner-loop runner where one exists.
-bun test path/to/test.test.ts   # or: npm run test:dev path/to/test.test.ts
-```
-
-Confirm:
-- Target test passes
-- Related tests + core set still pass (the full gate suite runs in CI, not every task)
-- Output pristine (no errors, warnings, deprecation notices)
-
-**Test fails?** Fix the code, not the test.
-
-**Other tests fail?** Fix now. A new feature that breaks an existing test is a regression.
+**MANDATORY.** Run the test you wrote, the existing tests for the module you changed, and the project's core smoke set — **not the whole suite** (see "test tiers" below). Output pristine. **Test fails?** Fix the code, not the test. **Other tests fail?** Fix now — that is a regression.
 
 ### REFACTOR — Clean Up
 
-After green only:
-- Remove duplication
-- Improve names
-- Extract helpers (especially: pure logic out of the imperative shell)
-- Clean up debt the GREEN phase introduced
+After green only: remove duplication, improve names, extract pure logic out of the shell. Keep tests green. Don't add behaviour.
 
-Keep tests green. Don't add behavior. Re-run the test suite after each refactor step.
+## Functional Core, Imperative Shell — design for testability
 
-### Repeat
+**This is the design that makes TDD viable.** If you are fighting to test something, the architecture is wrong, not the test.
 
-Next failing test for the next behavior or AC.
+```
+Imperative Shell — I/O, side effects, time, randomness (routes, adapters, repositories)
+      │  data in / data out        ← the AC test enters HERE, at the boundary
+      ▼
+Functional Core — pure input → output (rules, validation, decisions)
+                                   ← unit-tested ONLY under R3: one table or property test
+```
 
-## Toolchain & pipeline — which tools, which stage
+- A route `(request) → response` that delegates to a pure `priceOrder` — the route is shell, `priceOrder` is core. The AC test drives the route; a pricing table test exists only if the rules need more combinations than the route tests carry.
+- **Heuristic:** if a unit test must mock more than one collaborator, the function is in the wrong layer. Push pure logic into the core; thin the shell.
 
-Tests are one part of quality. A complete pipeline also runs **format, lint, type-check, SAST (static app-security), dependency scanning, and secrets scanning** — and *where* each runs matters as much as *what* runs. The organizing principle is the same as test tiers: **each stage is a strictly cheaper filter than the next; a check runs as early as it possibly can.**
+## Property-based testing (invariants)
 
-**Which tool for which language:** see the bundled **[`toolchain-matrix.md`](toolchain-matrix.md)** — a per-language table (Java · TypeScript/Node · React · Python) of the current best-practice defaults for testing, lint/format, type-check, SAST, dependency-scan, secrets, and mutation. Look up the row for the stack you're working in; don't guess a tool.
-
-**Which stage runs what** (language-agnostic — substitute the matrix's tools per stack):
-
-| Stage | Blocks? | Runs (cheapest-first) |
-|---|---|---|
-| **TDD inner loop** (on save / each red-green) | no | format-on-save · lint changed file · incremental type-check · your test files + core smoke |
-| **Pre-commit hook** (task done) | local | format `--write` · lint changed · **secrets scan** · type-check |
-| **Task gate** — PR to the integration branch | **yes** | format `--check` → lint → type-check → **secrets** → SAST *on the diff* → dep-scan *if deps changed* → **fast test tier** (unit + critical integration) |
-| **Feature gate** — PR to the main/release branch | **yes** | everything above, re-run, **+ extended/slow tests + full integration + full SAST + full dependency audit + human feature & security review** |
-| **Nightly / scheduled** (on main) | no | full E2E matrix · full mutation sweep · full SAST · full dependency audit |
-| **Deploy** | **yes** | green CI + contract gate (e.g. Pact `can-i-deploy`) where contracts exist |
-
-**Two-gate rule (when a repo uses an integration branch + a main branch):** the **task gate** is cheap and **diff-scoped** — it runs often, so keep it fast (diff-only SAST, changed-file lint, the fast test tier). The **feature gate** is expensive and **whole-feature** — it runs once per feature and is the last thing before prod, so the **full security review + extended tests land here**, not on every task. Don't run a full OWASP review or the slow E2E matrix on every task; do run them once before a feature ships.
-
-**Security review** (SAST + dependency-scan + secrets, checked against OWASP Top-10 / ASVS) is a distinct layer that sits *alongside* tests, weighted to the feature gate. Where a `security-review` capability exists (e.g. the `/security-review` command), the matrix tells it which SAST/SCA/secrets tool to use per language.
-
-**Rollout onto an existing codebase:** turning lint/SAST on against never-linted code produces a flood of pre-existing findings. Baseline, then ratchet — format-write once, lint warn-only, SAST diff-aware (gate only *new* findings), tighten to blocking over time. Never wall the team off on day one.
-
-## Property-based testing (for invariants)
-
-When the requirement is "X must hold across all valid inputs" rather than "X works for these examples," property-based testing is the right tool. In TS, use [fast-check](https://fast-check.dev/).
+When the requirement is "X holds for all valid inputs", use a property test (fast-check / Hypothesis / jqwik), titled with its invariant id:
 
 ```typescript
-import { fc } from 'fast-check';
-import { test } from 'vitest';
-
-// Invariant I1 (Polis): every delegate(Task) produces exactly one Result.
-test('I1: delegate produces exactly one Result for any valid Task', () => {
-  fc.assert(
-    fc.property(arbitraryValidTask(), async (task) => {
-      const results = await collectResults(() => delegate(task));
-      return results.length === 1;
-    }),
-    { numRuns: 100 },
-  );
+test('INV-1: delegate produces exactly one Result for any valid Task', () => {
+  fc.assert(fc.property(arbitraryValidTask(), async (task) =>
+    (await collectResults(() => delegate(task))).length === 1), { numRuns: 100 });
 });
 ```
 
-Property tests find edge cases that example-based tests miss. fast-check's shrinking minimizes failing inputs to a small reproducible counter-example — when you find one, **commit a regular example test for the shrunk input** in addition to keeping the property test. The example test is a regression guard; the property test is the ongoing invariant proof.
+When shrinking finds a counter-example, **add the shrunk input to the property's examples or to the AC test's table** — not a separate test. CI runs 100 iterations; nightly may run 10,000. A failing property blocks merge.
 
-CI runs property tests at default 100 iterations; nightly extends to 10,000. Failure of a property test blocks merge.
+🔴 **Never make a property pass by narrowing its generator or loosening its bound.** A counter-example is either a bug (fix the code) or a spec conflict (take it upstream, and keep the property red or `trace-allow`-documented until it is ruled). *Measured 2026-10-05, both runs of one scenario: rounding pushed `total` above `subtotal`, violating `INV-1`. One agent asserted `total <= subtotal + 0.025`; the other generated only prices in 0.05 steps "so the rounding cannot push it over". Both went green. Without the tolerance, the first suite's own generator breaks the invariant on 157 of its 500 orders.*
 
-## Frontend testing
+## Documented failure modes
 
-For any PR that touches a UI / page / route / asset file, the merge gate requires a Playwright (or equivalent E2E) test that drives the browser AND asserts the back-end effect. **Frontend unit tests against a mocked backend do NOT satisfy this.** A green frontend unit test against a mocked backend can co-exist with a broken contract; the bug only surfaces when frontend and backend run together. We test contracts, not mocks.
-
-The frontend testing stack maps to the test pyramid:
-
-| Layer | Tool (TS / React) | What it covers |
-|---|---|---|
-| Unit | Vitest + Testing Library | Pure component logic, hooks |
-| Component | Vitest + Testing Library | Rendered component behavior with realistic props |
-| Accessibility | `@axe-core/react` or `axe-playwright` | a11y violations (semantic HTML, ARIA, keyboard) |
-| Visual regression | Chromatic / Percy / Playwright `toHaveScreenshot()` | Layout / color regressions (use sparingly — flake-prone unless deterministic) |
-| Contract | fetch-mock + types from `polis-types` (or Pact for microservices) | Frontend ↔ backend wire shapes |
-| E2E (front-to-back, **mandatory for frontend touch**) | Playwright | User-visible flow + back-end effect |
-
-Playwright E2E test shape:
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('B-AC-1: existing chat workflow still works after Polis loaded', async ({ page, request }) => {
-  // Arrange — boot the full stack via docker-compose (handled by playwright.config.ts global-setup)
-  await page.goto('/epics/EPC_001/vision');
-
-  // Act — drive the UI from the user's perspective
-  await page.getByRole('textbox', { name: 'message' }).fill('Test message');
-  await page.getByRole('button', { name: 'Send' }).click();
-
-  // Assert — UI side
-  await expect(page.getByTestId('chat-messages')).toContainText('Test message');
-  await expect(page.getByTestId('chat-messages').locator('[data-role="assistant"]')).toBeVisible({ timeout: 30_000 });
-
-  // Assert — back-end effect (front-to-back is the binding requirement)
-  const response = await request.get(`/api/epics/EPC_001/messages`);
-  expect(response.status()).toBe(200);
-  const messages = await response.json();
-  expect(messages).toEqual(expect.arrayContaining([expect.objectContaining({ content: 'Test message' })]));
-});
-```
-
-Inside-out vs outside-in:
-
-- **Outside-in TDD** suits UI work. Start with the Playwright E2E (the user-facing acceptance criterion); let it fail; then drive inward — write component tests, then unit tests for the helpers each component needs. Match each layer with a passing test before moving inward. The E2E is your North Star.
-- **Inside-out TDD** suits pure-logic work. Start with a unit test for the smallest pure function; build outward to integration. Suits when the domain is well-understood and the API surface is clear.
-
-## Negative-path / failure-mode testing
-
-Per Polis-bar #10: every public function documents what it throws, when, and how to recover. **Tests verify each documented failure mode.** A function with three documented errors gets at least four tests: one happy path, three negative paths.
-
-```typescript
-// happy path
-test('T-AC-3: parses valid Bearer header', () => {
-  expect(parseBearer('Bearer abc')).toEqual({ ok: true, token: 'abc' });
-});
-
-// negative paths — one per documented failure mode
-test('T-AC-3.1: missing header → MISSING_AUTH error', () => {
-  expect(parseBearer(undefined)).toEqual({ ok: false, code: 'AUTH_001' });
-});
-test('T-AC-3.2: wrong scheme → INVALID_SCHEME error', () => {
-  expect(parseBearer('Basic abc')).toEqual({ ok: false, code: 'AUTH_002' });
-});
-test('T-AC-3.3: empty token → INVALID_TOKEN error', () => {
-  expect(parseBearer('Bearer ')).toEqual({ ok: false, code: 'AUTH_003' });
-});
-```
-
-Negative paths often discover ambiguity in the spec. That's a feature — surface the ambiguity to the spec author rather than silently making a choice in the implementation.
-
-## Test isolation (binding)
-
-- **No shared state between tests.** Module-level mutable variables, singletons, environment leakage — all forbidden across test files. A test failing because a previous test changed state is a flake-amplifier.
-- **Random execution order must still pass.** Configure your runner to randomize order (`vitest --shuffle`, jest `--randomize`) at least nightly in CI. If random-order fails but sequential passes, you have hidden coupling.
-- **Lifecycle hooks reset, not accumulate.** `beforeEach` resets state; `afterEach` cleans up resources. Avoid `beforeAll` / `afterAll` for state that mutates during tests — they're fine for read-only fixtures.
-- **No test-only methods on production classes** (per testing-anti-patterns.md). Cleanup goes in test utilities, not production code.
-
-## Test data management (fixtures and factories)
-
-- **Factories** for test data — a function that returns a valid object with sensible defaults, accepting overrides for the fields a specific test cares about. Lives in `test-fixtures/factories.ts` (or your project's equivalent). Each factory has one responsibility (`makeTask({ ... })`, `makeRoleConfig({ ... })`).
-- **Builders** when factories need fluent construction — `aTask().withSubagent('engineer').build()`.
-- **Fixtures committed to the repo** — JSON/YAML files for HTTP cassettes, DB seed data, large input examples. Never random literals strewn across tests; never inline 200-line JSON in a test file.
-- **Property-test arbitraries** — `fc.record({ ... })` builders for use across property tests; lives in `test-fixtures/property-test-arbitraries.ts`.
-
-## Flake handling — flakes are bugs
-
-A flaky test (passes sometimes, fails sometimes, no code change) is a **bug**, not a tooling annoyance. Treat it accordingly:
-
-1. **First flake:** investigate. Common causes: order coupling, time / random / clock leakage, real race condition in the system under test, network non-determinism in tests that hit external services they shouldn't.
-2. **Identify root cause** via `superpowers:systematic-debugging`.
-3. **Fix the root cause.** Pure logic + deterministic time + isolated state usually eliminates flakes.
-4. **If it cannot be fixed:** delete the test. A flaky test is worse than no test — it trains the team to ignore failures.
-
-**Forbidden:**
-- Retry-on-flake configuration (`jest.retryTimes`, Playwright `retries: N`) for the merge gate. CI should run with retries: 0. If a test is flaky enough to need retries, fix it.
-- `test.skip` / `test.only` committed to main (CI lint should reject)
-- `sleep(N)` to avoid race conditions (use condition-based waiting from `superpowers:systematic-debugging`)
-- "Pass on second attempt" CI configurations
-
-## Coverage as outcome, not target
-
-If you do TDD properly, coverage falls out at 80–90% naturally on most code. **Don't game the number** — coverage is a downstream signal, not a goal:
-
-- Aiming for "100% coverage" produces tests for trivial getters / setters that catch nothing.
-- Aiming for "raise coverage from 70% to 80%" produces low-quality tests bolted on after the fact (anti-pattern: tests as afterthought).
-- A project's quality bar may set a coverage **floor** (e.g., Polis-bar: 90% statements / 85% branches) — that's a regression gate, not a target.
-
-If your TDD-driven coverage is far below the project's floor, that's a signal: either you're skipping tests, or the codebase has hard-to-reach branches that suggest design problems.
-
-## The mutation check (cheap, every test file, no tooling)
-
-Before finishing a test file, mentally mutate the production code. **At least one test should fail for each realistic mutation:**
-
-- wrong constant or argument
-- wrong branch handler
-- missing state change or side effect
-- empty or default return
-- missing validation for zero, empty, null, unauthorized, or malformed input
-
-A mutation that nothing catches marks that behavior as unprotected — or the test as tautological. This is the 30-second version of the tooling below; run it always, run Stryker selectively.
-
-### Warning signs — a test that is not earning its keep
-
-- setup and assertion share the same object, guaranteeing equality
-- the test can fail only through a crash or a missing selector
-- it fails on every intentional change and never on accidental breakage
-- expected values are hidden behind loops, builders, or helpers
-- it greps source text, or asserts that a removed symbol stays removed
-- it would still pass if only the framework remained
-- it exists for coverage, checking no side effect or outcome
-- an assertion checks a `*-mock` test id, or fails if you remove the mock
-- a production method is called only from test files
-- mock setup is more than half the test, or you cannot explain why the mock is needed
-
-## Mutation testing (advanced — for high-criticality code)
-
-Mutation testing is the gold standard for measuring **whether your tests would actually catch bugs**. The tool (Stryker for JS/TS) introduces small mutations to your code (flip `<` to `<=`, drop a `return`, etc.) and verifies your test suite catches them. Coverage tells you what executed; mutation testing tells you what your tests notice.
-
-When to use:
-
-- **Always for invariant-critical code** (Polis I1–I5 invariants, security boundaries, billing / cost calculation, FSM transitions). The cost (slow run; minutes) is worth the assurance.
-- **Optional for new packages** — once a package is mature, add mutation testing to a CI nightly job.
-- **Skip for trivial CRUD** — mutation testing on glue code returns mostly noise.
-
-Configure for changed-files-only via `git diff` for fast feedback in PR CI.
-
-## Contract testing (across consumer boundaries)
-
-When two components communicate (frontend ↔ backend, plugin ↔ host, service ↔ service), contract tests prove they agree on the wire shape. **Our merge gate requires every contract a PR produces to be exercised by a consumer test, not just the producer's unit test.**
-
-Patterns:
-
-- **Producer-side fixture-based contract test** — the producer tests against a frozen example payload. Cheap, no extra tools. Sufficient when the consumer is in the same repo and imports the producer's types.
-- **Consumer-side type-driven contract test** — the consumer imports the type from the producer's types package (`@swisper/polis-types`) and uses it in a typed assertion. If the producer's type changes, the consumer's compile fails. Strong for monorepos.
-- **Pact (consumer-driven contract testing)** — the consumer writes a test specifying its expectations; Pact records the contract; the producer's CI verifies the contract on its side. Strong for cross-repo / cross-team microservices. Combined with Playwright on the consumer side, it's the 2026 idiom.
-
-For most monorepo work, type-driven contract tests + a single integration test that exercises the producer-consumer boundary suffices. For cross-repo or external-integration boundaries, consider Pact.
+**One test per documented failure mode, at the boundary, titled with its id** (`FM-x` or the spec's error code). It asserts what the caller receives *and* what did not happen (nothing stored, nothing charged). A failure mode the spec does not document is a spec question — surface it, don't silently test a choice you made.
 
 ## Bug-fix TDD (regression)
 
-When fixing a bug:
+1. Write a failing test that reproduces the bug **at the altitude where the user met it**, titled `FM-<ticket>: <what went wrong>`. If an existing test should have caught it, **strengthen that test** instead (R6).
+2. Verify it fails because the bug reproduces.
+3. Fix. Test passes. The test stays — it is the regression guard.
 
-1. Write a failing test that reproduces the bug. The test name encodes the bug: `test('regression #234: empty email accepted as valid', ...)`.
-2. Verify the test fails for the right reason (the bug actually reproduces).
-3. Fix the bug. Test passes.
-4. The test stays — it's a regression guard.
+Never fix a bug without a test. See `superpowers:systematic-debugging` Phase 4.
 
-Never fix a bug without a regression test. The bug existed because no test caught it; the fix isn't durable until a test does.
+## Test tiers and the fast inner loop
 
-If the bug was discovered by a property test's shrinking, also commit the shrunk failing input as an example test — the property test stays as the ongoing invariant proof, the example test is the explicit regression guard against that exact case.
+A suite that runs slowly gets run rarely. Fewer, higher-altitude tests (R1–R4) are the first fix; test tiers are the second.
 
-## Good Tests
+**During the loop, run targeted tests — never the whole suite:** the tests you are writing, the existing tests for the module you change (pass their paths — you know which they are), and the core smoke set. Don't lean on `vitest related` in a well-connected codebase — it walks the transitive import graph (measured: a module with 2 direct importers pulled 257 files). The full suite is CI's job.
 
-| Quality | Good | Bad |
-|---------|------|-----|
-| **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
-| **Clear** | Name describes behavior; AC ID prefix when applicable | `test('test1')`, `test('it works')` |
-| **Shows intent** | Demonstrates desired API at the test boundary | Obscures what code should do |
-| **AAA structure** | Arrange / Act / Assert visible in three sections | Setup interleaved with assertions |
-| **Real behavior** | Tests the system under test directly | Tests mock behavior |
-| **Isolated** | Passes regardless of execution order | Depends on previous test's state |
-| **Deterministic** | Same input → same result, every run | Flaky; depends on time / random / network |
+**Assign every test a tier when you create it** (the selector is project-defined — Foundry: `*.extended.test.ts` suffix, `tests/core.txt` manifest; see `backend/tests/TIERS.md`):
 
-## Why Order Matters
+| Tier | What goes here | Runs |
+|---|---|---|
+| **core** | A *small* set of fast tests guarding "is the app fundamentally broken" | Inner loop, constantly |
+| **gate** | Default. The AC, invariant and failure-mode tests | Required CI check |
+| **extended** | Genuinely slow and not needed on every PR (long boot-to-e2e flows) | Non-blocking lane (main / nightly) |
 
-**"I'll write tests after to verify it works"**
+Keep core small — if everything is core, nothing is.
 
-Tests written after code pass immediately. Passing immediately proves nothing:
-- Might test wrong thing
-- Might test implementation, not behavior
-- Might miss edge cases you forgot
-- You never saw it catch the bug
+## Test isolation and flakes (binding)
 
-Test-first forces you to see the test fail, proving it actually tests something.
+- **No shared state between tests**; random order must pass (`vitest --shuffle`, jest `--randomize`) at least nightly.
+- `beforeEach` resets; `afterEach` cleans up; `beforeAll` only for read-only fixtures. No test-only methods on production classes.
+- Test data comes from factories with sensible defaults and per-test overrides, and from committed fixture files — never 200-line inline JSON.
+- **A flaky test is a bug.** Find the root cause (`superpowers:systematic-debugging`): order coupling, clock or randomness leakage, a real race. Cannot fix it → delete it. **Forbidden:** retries in the merge gate (`retries`, `retryTimes`, "pass on second attempt"), `sleep(N)` for races (condition-based waiting instead), committed `test.skip` / `test.only`.
 
-**"I already manually tested all the edge cases"**
+## The mutation check (every test file, no tooling)
 
-Manual testing is ad-hoc. You think you tested everything but:
-- No record of what you tested
-- Can't re-run when code changes
-- Easy to forget cases under pressure
-- "It worked when I tried it" ≠ comprehensive
+Before finishing, mentally mutate the production code — a wrong constant, the wrong branch, a missing state change, an empty return, a missing validation. **At least one test should fail for each.** A mutation nothing catches means the behaviour is unprotected — **strengthen the test that claims it** (R6): add the boundary value to the AC's table, add the missing assertion. Warning signs of a test not earning its keep: setup and assertion share the object; it fails only through a crash; it fails on every intentional change and never on a bug; it would pass if only the framework remained; its mock setup is over half the test. Tooling (Stryker, PIT, mutmut) and when to run it: [`toolchain-matrix.md`](toolchain-matrix.md).
 
-Automated tests are systematic. They run the same way every time.
+## Coverage is an outcome, never a target
 
-**"Deleting X hours of work is wasteful"**
+Coverage tells you what executed, not what is proved. A project's coverage **floor** is a regression gate; never write a test to raise the number. Far below the floor → you skipped an AC or a failure mode, or the code has branches no promise needs (delete them).
 
-Sunk cost fallacy. The time is already gone. Your choice now:
-- Delete and rewrite with TDD (X more hours, high confidence)
-- Keep it and add tests after (30 min, low confidence, likely bugs)
+## Toolchain and pipeline
 
-The "waste" is keeping code you can't trust. Working code without real tests is technical debt.
-
-**"TDD is dogmatic, being pragmatic means adapting"**
-
-TDD IS pragmatic:
-- Finds bugs before commit (faster than debugging after)
-- Prevents regressions (tests catch breaks immediately)
-- Documents behavior (tests show how to use code)
-- Enables refactoring (change freely, tests catch breaks)
-
-"Pragmatic" shortcuts = debugging in production = slower.
+Which tool per language (Vitest, Playwright, pytest, fast-check, Stryker, Pact, Semgrep…), which stage runs what (inner loop → pre-commit → task gate → feature gate → nightly), contract testing patterns, and rolling lint/SAST onto an existing codebase: **[`toolchain-matrix.md`](toolchain-matrix.md)**. Look up the row; don't guess a tool.
 
 ## Common Rationalizations
 
 | Excuse | Reality |
 |--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "Too simple to test" | Simple code breaks. If it carries a promise, its AC test covers it. If it carries none, it needs no test. |
 | "I'll test after" | Tests passing immediately prove nothing. |
-| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
 | "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run. |
-| "Deleting X hours is wasteful" | Sunk cost fallacy. Keeping unverified code is technical debt. |
-| "Keep as reference, write tests first" | You'll adapt it. That's testing after. Delete means delete. |
-| "Need to explore first" | Fine. Throw away exploration, start with TDD. |
-| "Test hard = design unclear" | Listen to test. Hard to test = hard to use. |
-| "TDD will slow me down" | TDD faster than debugging. Pragmatic = test-first. |
-| "Manual test faster" | Manual doesn't prove edge cases. You'll re-test every change. |
-| "Existing code has no tests" | You're improving it. Add tests for existing code. |
-| "Just retry the flaky test, it's fine" | Flake = bug. Retry hides it. Fix or delete. |
-| "I'll add property tests later" | Invariants without property tests aren't proven. Add them now or weaken the spec. |
-| "Frontend unit test against mocked backend is enough" | No — the bug is at the contract boundary. Playwright front-to-back is the gate. |
-| "Coverage is at 91%, we're done" | Coverage is outcome not target. Mutation test the critical paths. |
+| "Deleting X hours is wasteful" | Sunk cost. Keeping unverified code is debt. |
+| "The route test carries the AC; the unit tests are functional-core support" | Support for what? Name the id. If B-AC-1 already proves the gold threshold, a unit test of the gold threshold proves it twice. Delete it. |
+| "Each traces to a §4 rule" / "spec §4: …" in the title | A spec section is not an id. Which AC, invariant or failure mode? If the rule has no AC, that is a spec gap — take it upstream. |
+| "The reviewer said coverage was thin" | Thin coverage means an AC, invariant or failure mode is unproved. Name which one, and prove it at the boundary. Count is not coverage. |
+| "The mutant survived, so I added a test for it" | Which existing test claims that behaviour? Strengthen it — add the boundary row. A new test is the last resort and still needs an id. |
+| "Unit tests are faster" | The fast inner loop runs one test. A suite of 18,000 fast tests on every merge is not fast. |
+| "It's just one more test" | That is how 21,500 happened. Every test costs a run on every merge, forever. |
+| "Keep the old unit test too, belt and braces" | Two tests for one promise is one test plus maintenance. The higher one stays; the lower one goes in this PR. |
+| "The pyramid says most tests are unit tests" | Not here. Value first: boundary first, descend only when the boundary can't reach the case. |
+| "Frontend unit test against a mocked backend is enough" | The bug lives at the contract. A business AC with a UI is proved in a real browser, front to back. |
+| "I'll quantise the generator / add a tolerance so the property holds" | Then it proves a weaker invariant than its id claims. The counter-example is a bug or a spec question — fix the code or ask. |
+| "Just retry the flaky test" | Flake = bug. Fix or delete. |
 
-## Red Flags — STOP and Start Over
+## Red Flags — STOP
 
-- Code before test
-- Test after implementation
-- Test passes immediately
-- Can't explain why test failed
-- Tests added "later"
-- Rationalizing "just this once"
-- "I already manually tested it"
-- "Tests after achieve the same purpose"
-- "It's about spirit not ritual"
-- "Keep as reference" or "adapt existing code"
-- "Already spent X hours, deleting is wasteful"
-- "TDD is dogmatic, I'm being pragmatic"
-- "This is different because..."
-- **"Adding `// @ts-ignore` to make the test compile"** — fix the design instead
-- **"Adding `retries: 3` to make the flaky test pass"** — fix the flake instead
-- **"Test file is 800 lines, hard to read"** — split tests by concern; extract fixtures
-- **"Mock setup is longer than the test logic"** — wrong mock level, or wrong design
-- **"This AC has no test, the impl is obvious"** — every AC has a named test, no exceptions
+- Code before test; test passes immediately; can't explain why it failed
+- **A test title with no AC, INV or FM id** — "pricing:", "spec §4", "handles X", "works"
+- **A unit test for a rule a boundary test already proves**
+- **A fix round or a mutant answered with a NEW test while an existing test claims the behaviour**
+- **A report that lists tests added but none deleted after a higher test landed**
+- **Test count rising faster than the AC count**
+- Mock-call counts, `typeof … === 'function'`, constant equality, source greps, "stays removed"
+- `// @ts-ignore`, `retries: 3`, `sleep()` to get a test green
+- "I already manually tested it" · "this is different because…" · "keep as reference"
 
-**All of these mean: Delete code. Start over with TDD.**
-
-## Example: Bug Fix
-
-**Bug:** Empty email accepted
-
-**RED**
-```typescript
-test('regression: rejects empty email', async () => {
-  const result = await submitForm({ email: '' });
-  expect(result.error).toBe('Email required');
-});
-```
-
-**Verify RED**
-```bash
-$ bun test
-FAIL: expected 'Email required', got undefined
-```
-
-**GREEN**
-```typescript
-function submitForm(data: FormData) {
-  if (!data.email?.trim()) {
-    return { error: 'Email required' };
-  }
-  // ...
-}
-```
-
-**Verify GREEN**
-```bash
-$ bun test
-PASS
-```
-
-**REFACTOR**
-Extract validation for multiple fields if needed.
+**All of these mean: stop. Delete the test or the code, and start from the promise.**
 
 ## Verification Checklist
 
-Before marking work complete:
-
-- [ ] Every new function/method has a test
-- [ ] Every B-AC-N / T-AC-N the work claims to verify has a test whose name includes the AC ID
-- [ ] Watched each test fail before implementing
-- [ ] Each test failed for expected reason (feature missing, not typo / import error)
-- [ ] Wrote minimal code to pass each test
-- [ ] All tests pass
-- [ ] Output pristine (no errors, warnings, deprecation notices)
-- [ ] Tests use real code (mocks only at appropriate level, never on the system under test)
-- [ ] Edge cases AND documented failure modes covered (one negative-path test per documented error)
-- [ ] Property tests added for any invariants the work touches
-- [ ] If frontend touched: Playwright front-to-back E2E test in place
-- [ ] Test isolation: no shared state, random order passes, no `test.skip` / `test.only` / `sleep()`
-- [ ] No new `// @ts-ignore`, `// eslint-disable`, `as any` to silence the test machinery
-- [ ] No retry-on-flake configuration (`retries`, `retryTimes`, etc.)
-- [ ] TDD evidence in commit history: failing-test commit precedes passing-test commit (`git log -p`)
+- [ ] Every test I added or changed names an AC, INV or FM id; `trace-check.sh` summary line quoted
+- [ ] Every AC the task claims has a test at promise altitude (`proving-acs.md` gate passed)
+- [ ] Every unit test is an R3 exception — table or property, never N copies
+- [ ] Findings and mutants fixed by strengthening first; new tests only where no test sat at the right altitude
+- [ ] Lower tests made redundant by this change are deleted; report states added / strengthened / deleted / net
+- [ ] Watched each test fail for the expected reason; failing-test commit precedes passing-test commit
+- [ ] Every documented failure mode has one boundary test; every listed invariant a property test
+- [ ] Frontend touched → real-browser front-to-back test for the business AC
+- [ ] No shared state, no `skip`/`only`/`sleep`/retries, no new `@ts-ignore` / `as any` / `eslint-disable`
+- [ ] Output pristine
 
 Can't check all boxes? You skipped TDD. Start over.
 
@@ -713,55 +306,36 @@ Can't check all boxes? You skipped TDD. Start over.
 
 | Problem | Solution |
 |---------|----------|
-| Don't know how to test | Write wished-for API. Write assertion first. Ask your human partner. |
-| Test too complicated | Design too complicated. Push pure logic into the functional core. |
+| Don't know how to test | Write the AC's Then-clause as the assertion first, at the boundary. Ask your human partner. |
+| The boundary needs dozens of cases | One table-driven or property test of the pure core, titled with its AC (R3a). |
 | Must mock everything | Code too coupled. Apply Functional Core / Imperative Shell. |
-| Test setup huge | Extract factories / builders. Still complex? Simplify design. |
-| Property test fails on weird input | Read the shrunk counter-example. It's a real bug. Add the shrunk input as an example regression test alongside the property test. |
-| E2E test flakes on timing | Replace `sleep()` with condition-based waiting. Use Playwright's auto-waiting matchers (`toBeVisible`, `toHaveText`). If still flaky, the system has a real race condition — fix it. |
-| Frontend unit tests pass but Playwright fails | The contract is broken. The frontend unit test was passing against a mock that doesn't match reality. Fix the contract test, then the impl. |
-
-## Debugging Integration
-
-Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix and prevents regression.
-
-Never fix bugs without a test. See `superpowers:systematic-debugging` Phase 4 for the full bug-fix flow that integrates TDD.
-
-## Testing Anti-Patterns
-
-Two bundled references carry the detail:
-
-- [`proving-acs.md`](proving-acs.md) — **read before writing any AC-mapped test.** Promise vs mechanism altitude, the ground-truth rule, the 5-step gate, and why a grep for an AC ID proves nothing.
-- [`testing-anti-patterns.md`](./testing-anti-patterns.md) — mocks and test utilities. Key entries:
-
-- Testing mock behavior instead of real behavior
-- Adding test-only methods to production classes
-- Mocking without understanding dependencies
-- Incomplete mocks
-- Integration tests as afterthought
-- Shared global state between tests
-- Retry-as-flake-mitigation
-- Test-only env vars in production code
-- "Pass on retry" CI configurations
-- Frontend unit test as substitute for E2E
+| A rule has no AC to name | Spec gap. Ask; don't invent an id and don't write an untraced test. |
+| Frontend unit passes, Playwright fails | The contract is broken; the unit test was passing against a mock. Fix the contract, then the impl — and delete the mocked test if the browser test now proves the AC. |
 
 ## Final Rule
 
 ```
-Production code → test exists and failed first
-ACs in spec → tests named after AC IDs
-B-AC → asserted at PROMISE altitude (what the user receives), against arranged ground truth
-Frontend touched → Playwright front-to-back E2E exists
-Invariants in spec → property tests prove them
-Otherwise → not TDD; not ready to merge
+Production code       → a test exists and failed first
+Every test            → names its AC / INV / FM, or does not exist
+B-AC                  → asserted where the user receives it, against arranged ground truth
+Unit test             → only a pure core table/property, an invariant, or a hard-to-reach FM
+Finding / mutant      → strengthen first; add last; delete what a higher test now covers
+Every PR              → tests added / strengthened / deleted / net, from trace-check
 ```
 
 No exceptions without your human partner's permission.
 
+## Bundled references
+
+- [`proving-acs.md`](proving-acs.md) — **read before writing any test.** Promise vs mechanism altitude, the ground-truth rule, the gate, front-to-back browser tests, and why a grep for an AC id proves nothing.
+- [`testing-anti-patterns.md`](testing-anti-patterns.md) — mocks, test-only production code, shared state, retries, the untraced unit test.
+- [`toolchain-matrix.md`](toolchain-matrix.md) — tools per language, pipeline stages, contract and mutation testing.
+- `trace-check.sh` — R8, the mechanical R2 check.
+
 ## Integration with other skills
 
-- `superpowers:writing-plans` — produces the AC list and PR decomposition this skill's tests trace to
-- `superpowers:executing-plans` / `superpowers:subagent-driven-development` — invoke this skill per task; merge gate verifies TDD evidence
-- `superpowers:systematic-debugging` — invoke when a test fails for an unclear reason; the regression test uses TDD discipline
-- `superpowers:verification-before-completion` — the bridge between "tests pass on my machine" and "tests pass for real"; invoke before reporting DONE
-- `superpowers:requesting-code-review` — the code reviewer checks AC-name-mapped tests, contract-tested-by-consumer, no escape hatches; the maintainability reviewer checks no debt markers in test files
+- `superpowers:writing-plans` — produces the AC list and the named test list this skill's tests trace to
+- `superpowers:subagent-driven-development` / `superpowers:executing-plans` — invoke this skill per task; the per-PR report carries the trace-check line
+- `superpowers:systematic-debugging` — a test failing for an unclear reason; the regression test follows Bug-fix TDD
+- `superpowers:verification-before-completion` — before reporting DONE
+- `superpowers:requesting-code-review` — the reviewer checks the test list against the plan and flags untraced or mechanism-only tests

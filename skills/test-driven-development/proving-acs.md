@@ -1,10 +1,15 @@
-# Proving the AC — high-value business tests
+# Proving the promise — the method for every test
 
-**Load this when:** writing any test that claims to verify a `B-AC-N` or
-`T-AC-N` from a spec or plan, or when a reviewer asks "is this AC actually
+**Load this when:** writing ANY test, and always before a test that claims a
+`B-AC-N`, `T-AC-N` or `UBER-AC-N`; or when a reviewer asks "is this AC actually
 covered?"
 
-**The one-line rule:** *the AC ID in a test's name is a label, not proof.*
+**The one-line rule:** *a test proves a promise where the promise is received —
+and the AC id in its name is a label, not proof.*
+
+This file is rule R1 of `SKILL.md` worked out. The rest of the rules (ids in
+titles, unit tests as the exception, strengthen before you add, delete what a
+higher test covers) only make sense once this one is held.
 
 ---
 
@@ -78,9 +83,16 @@ tell you the code is lying.
 
 | Altitude | Asserts | Catches | Right for |
 |---|---|---|---|
-| **Mechanism** | a function returns X | wrong branch, bad arithmetic | T-AC |
-| **Contract** | the response/payload has shape+values | producer↔consumer drift | T-AC, some B-AC |
-| **Promise** | the user sees / receives the true thing | *the code being right and the claim being false* | **B-AC — always** |
+| **Promise** | the user sees / receives the true thing | *the code being right and the claim being false* | **B-AC — always.** The default for every test |
+| **Contract** | the response/payload a client consumes has shape+values | producer↔consumer drift | T-AC at a boundary; a B-AC only when no user surface exists |
+| **Mechanism** | a function returns X | wrong branch, bad arithmetic | **Only the R3 exceptions** — one table or property test of a pure core, an invariant, a hard-to-reach failure mode |
+
+**Start at the top row and descend only when the row above cannot reach the
+case.** A mechanism test for a rule the promise test already exercises is the
+same proof twice — the lower one is deleted (R7). Measured, 2026-10-05: an agent
+working from the old pyramid wrote 7 route tests and 11 unit tests for one
+pricing route; at least 5 of the 11 re-proved thresholds the route tests already
+asserted, and none named a promise.
 
 The four Foundry bugs were all invisible at mechanism altitude and all obvious
 at promise altitude. Three of the four were **also** invisible at contract
@@ -91,6 +103,25 @@ jsdom: the component returned correct markup. It was off-viewport in a real
 browser. No unit or contract test can catch "the user cannot see it" — this is
 why a frontend-touching PR requires a real browser test, and why a render-gate
 against the approved mock is not ceremony.
+
+### Front to back: the shape of a business AC with a UI
+
+A PR that touches a UI proves its business AC in a real browser **and** asserts
+the back-end effect. A frontend unit test against a mocked backend can be green
+beside a broken contract — it does not satisfy a B-AC, and once the browser test
+proves the AC, the mocked one is deleted unless it proves something else by id.
+
+```typescript
+test('B-AC-1: an operator sends a message and it is stored', async ({ page, request }) => {
+  await page.goto('/epics/EPC_001/vision');
+  await page.getByRole('textbox', { name: 'message' }).fill('Test message');
+  await page.getByRole('button', { name: 'Send' }).click();
+
+  await expect(page.getByTestId('chat-messages')).toContainText('Test message');   // what they see
+  const messages = await (await request.get('/api/epics/EPC_001/messages')).json();  // what persisted
+  expect(messages).toEqual(expect.arrayContaining([expect.objectContaining({ content: 'Test message' })]));
+});
+```
 
 ---
 
@@ -118,6 +149,9 @@ GIVEN an AC you are about to write a test for:
 
 5. For a B-AC: is the assertion on a surface a user actually reaches?
      no → it is not yet a business test, whatever its name says.
+
+6. Does an existing test already prove this promise?
+     yes → strengthen it (a row, a boundary value, an assertion). Do not add.
 ```
 
 Step 4 is the one that would have caught all four bugs.
@@ -155,6 +189,12 @@ never been seen failing for its AC's reason is undischarged.
 - **The mocked promise.** A B-AC verified against a mocked backend. The mock
   agrees with the frontend; production does not. See
   `testing-anti-patterns.md` §9.
+- **The shadow test.** A unit test of the rule the AC test already proves —
+  "gold gets GOLD10 at 100.00" beside a route test that posts 100.00 as a gold
+  customer. Twice the run cost, one proof. Delete the lower one.
+- **The section-number title.** `"spec §4: silver at 200"` names a place, not a
+  promise. If the rule matters it belongs to an AC — make it a row of that AC's
+  table. If no AC covers it, that is a spec gap; take it upstream.
 
 ---
 
@@ -162,8 +202,11 @@ never been seen failing for its AC's reason is undischarged.
 
 | When you… | Do |
 |---|---|
+| Write any test | Name its AC / INV / FM id; start at the boundary |
 | Write a `B-AC-N` test | Assert what the user sees/receives, against arranged ground truth |
-| Write a `T-AC-N` test | Mechanism or contract altitude is fine |
+| Write a `T-AC-N` test | At the boundary it is about (the route, the CLI, the persisted row); a mechanism test only under R3 |
+| Find a gap (review, mutant) | Strengthen the test that claims the behaviour; add only if none sits at the right altitude |
+| Land a higher test | Delete the lower tests it now covers, in the same PR |
 | Build the expected value | Derive from the AC and the arranged world — never from the code |
 | Claim an AC is covered | Break the behavior, watch that named test go red |
 | See an AC with no user-visible consequence | Send it back to the spec |

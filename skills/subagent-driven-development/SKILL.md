@@ -309,7 +309,8 @@ evidence was always reviewer-side; the mandate had drifted to the author.
    can is the entire justification for carrying it rather than deleting it.
 3. **A sweep of N mutants over fresh code** — the expensive one, and the one with the
    0-for-45 return. **This belongs to the reviewer, not the author**, and only at
-   logic/contract tier.
+   logic/contract tier. **A survivor is reported as "strengthen `<existing test>` so this
+   mutant dies"** — never "add a test". See "Tests: the plan's list" below.
 
 **If quality drops after this change, put the sweep back and say so** — this is a trade
 made on one PR's evidence, not a law.
@@ -340,6 +341,30 @@ altitude where drift is least visible.
 inside a task; the boundary catches what only appears across tasks. Cutting
 per-task ceremony makes the boundary review **more** load-bearing, not less.
 
+## Tests: the plan's list, strengthened before added, deleted when covered
+
+🔴 **The review loop is where a suite inflates.** Every finding and every surviving
+mutant used to be answered with a new test, and deletion was never a step.
+*Measured 2026-10-05, Foundry main: ~21,500 test cases, ~18% naming an AC; in a
+pressure run on the old prompts, three review findings on one route were answered
+with **8 new unit tests, 0 strengthened, 0 deleted** — and a reviewer facing 13
+untraced tests asked for 4 deletions and **2 more**.* The rules are
+`test-driven-development` R1–R8; this is where the controller enforces them.
+
+- **The dispatch carries the plan's named test list** — one per AC, plus the listed
+  invariants and failure modes (`implementer-prompt.md` has the slot). A test beyond
+  the list is allowed only with its AC/INV/FM id named in the commit and the report.
+- **Fix rounds strengthen first.** Send a finding or a survivor as *"make `<test>`
+  fail on this"*. A new test only when no existing test sits at the right altitude,
+  and it carries an id.
+- **The reviewer treats untraced or mechanism-only tests as Important findings** —
+  disposition *strengthen* or *delete*, never "keep for coverage". It never requests
+  a test without naming the id it proves.
+- **Every report and ledger line counts tests added, strengthened and deleted**, from
+  `trace-check.sh` (in `test-driven-development`), not from memory. **At the PR
+  boundary, net growth is explained** — which promises the new tests prove, and which
+  lower tests a new higher one made redundant and were deleted.
+
 ## When to run what — the gate ladder
 
 Most of the elapsed time in a plan is not thinking. It is the same suite run by
@@ -353,7 +378,7 @@ runs its gates and reports the command **and its output**; you record it in the
 ledger against the commit:
 
 ```
-Task 4 @ a7c31f9: tsc 0 · lint 0 · touched-suite 43 green · mutation 0 survivors
+Task 4 @ a7c31f9: tsc 0 · lint 0 · touched-suite 43 green · tests +2 ~1 −3 · trace-check PASS
 ```
 
 The reviewer reads that line. It does not re-run the suite — it is reviewing a
@@ -498,7 +523,7 @@ A review that finds problems starts a fix loop, and **a fix loop with no cap doe
 
 Everything else enters. One round = one fix dispatch + at most one scoped re-review. **Three rounds maximum per task.**
 
-- **Rounds 1–2 — resume the original implementer.** Send the open findings verbatim; its context is intact. If your harness cannot message a live subagent, dispatch a fresh one carrying the brief path, the report-file path and the findings — the report file is the persistent memory either way.
+- **Rounds 1–2 — resume the original implementer.** Send the open findings verbatim, plus one line: *"Fix a test gap by strengthening the test that claims the behaviour; a new test only if none sits at the right altitude, with its id; report tests +a ~s −d."* Its context is intact. If your harness cannot message a live subagent, dispatch a fresh one carrying the brief path, the report-file path and the findings — the report file is the persistent memory either way.
 - **Round 3 — fresh implementer on a more capable model**, framed: *"A prior implementer attempted this task twice; you own it now. Read the report file for what was tried."* A loop surviving two resumes means the implementer cannot see its own problem — fresh eyes plus a capability bump in one move.
 - **Every round:** the implementer fixes, re-runs **the tests covering the amended code** (not the full suite — see the gate ladder), appends its fix report to the same report file, and returns the short contract. Confirm the report carries the covering tests, the command run, **and its output** — all three, or it is a claim rather than a measurement.
 - **After each round**, append: `Task <N>: fix round <R>/3 (<X> addressed, <Y> open — <one-liners>; commits <a7>..<b7>)`.
@@ -595,7 +620,7 @@ improvise a decomposition.
 For a multi-PR plan, organize the per-task loop above by PR:
 
 1. **Before starting a PR:** create the sub-branch named in the PR decomposition row (branch from the feature branch, not from `main`).
-2. **Within the PR:** dispatch the per-task loop (implementer → spec review → code-quality review → mark task complete) for every task the PR claims to cover.
+2. **Within the PR:** dispatch the per-task loop (implementer → code-quality review → mark task complete) for every task the PR claims to cover.
    🔴 **One PR per wave** (`writing-plans`): the wave's tasks run in parallel, each in its own worktree off the wave branch; once a task's review passes, `git merge --no-ff` it into the wave branch locally, so the reviewed history is kept. Push once — CI runs once per wave, not once per task.
    🔴 **Generated and shared files: once, at the end of the wave PR** — the regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and the architecture pages (`update-documentation`). Put them under `must_not_edit` in every task dispatch; never per task, never per fix round, never in parallel branches. *Measured 2026-10-05: ~45 pages re-anchored after every fix round and rebase; the shared files conflicted when PRs were combined.*
 3. **After all the PR's tasks are complete and individually reviewed:** run the **PR-boundary review** before suggesting merge.
@@ -620,7 +645,7 @@ correctness, and it is cheap: one PR, one goal, a few minutes.
 
 Then dispatch TWO subagents in sequence (not in parallel — maintainability review benefits from seeing code-review findings):
 
-1. **Code review** using `superpowers:requesting-code-review/code-reviewer.md`. Reviewer checks: plan/spec alignment, AC coverage with AC-named tests, contract integrity (exercised across consumer boundary), code quality, architecture, production readiness, frontend Playwright if applicable, no new `// @ts-ignore` / `// eslint-disable` in diff.
+1. **Code review** using `superpowers:requesting-code-review/code-reviewer.md`. Reviewer checks: plan/spec alignment, AC coverage with AC-named tests, **the test list against the plan — untraced or mechanism-only tests are Important, `trace-check.sh` over the PR range is quoted, net test growth explained**, contract integrity (exercised across consumer boundary), code quality, architecture, production readiness, frontend Playwright if applicable, no new `// @ts-ignore` / `// eslint-disable` in diff.
 2. **Maintainability review** using `superpowers:requesting-code-review/maintainability-reviewer.md`. Reviewer checks: structural consistency (size/complexity caps), public/internal API discipline, naming consistency, dead code / debt markers, ADR debt, cross-component drift.
 
 Apply each review's Critical / High / Important findings before proceeding. Then:
@@ -662,15 +687,16 @@ You: "User level (~/.config/superpowers/hooks/)"
 Implementer: "Got it. Implementing now..."
 [Later] Implementer:
   - Implemented install-hook command
-  - Added tests, 5/5 passing
+  - Tests +2 (B-AC-1 install at user level, FM-1 existing hook refused) ~0 −0;
+    trace-check PASS; 2/2 passing
   - Self-review: Found I missed --force flag, added it
   - Committed
 
-[Ledger] Task 1 @ a7c31f9: tsc 0 · lint 0 · touched-suite 5 green
+[Ledger] Task 1 @ a7c31f9: tsc 0 · lint 0 · touched-suite 2 green · tests +2 ~0 −0
 
 [Dispatch code quality reviewer — and START TASK 2's implementer at the same time;
  the reviewer is a reader, task 2 doesn't consume task 1's artifact]
-Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+Code reviewer: Strengths: each AC proved at the CLI boundary. Issues: None. Approved.
 
 [Mark Task 1 complete]
 
@@ -686,11 +712,13 @@ Implementer:
 [Ledger] Task 2 @ 3fd0e14: tsc 0 · lint 0 · touched-suite 8 green
 
 [Dispatch code quality reviewer]
-Code reviewer: Issues (Important): Magic number (100). Missing: progress reporting
-  — spec says "report every 100 items", no AC-named test covers it.
+Code reviewer: Issues (Important): Magic number (100). T-AC-4 ("report every 100
+  items") is asserted on 50 items only — the test cannot fail on the interval.
+  Also Important: `verify calls repair once` is a mock-call count naming no id — delete.
 
 [Fix round 1/3 — resume the same implementer]
-Implementer: Extracted PROGRESS_INTERVAL, added T-AC-4 progress test, 9/9 green
+Implementer: Extracted PROGRESS_INTERVAL; strengthened T-AC-4 to repair 250 items and
+  assert reports at 100 and 200; deleted the mock-count test. Tests +0 ~1 −1, 7/7 green
 
 [Fix touched logic → scoped re-review]
 Code reviewer: Both ADDRESSED, no new breakage in the fix diff. ✅
@@ -705,47 +733,19 @@ GOAL CHECK — G-1: ran the CLI as an operator, saw progress reported every 100
 [Full suite + every gate, once — this is the binding run]
   tsc 0 · tsc -p tsconfig.test.json 0 · lint 0 · 251 green · complexity 239/239
 [Dispatch PR code review, then maintainability review]
-Reviewers: All ACs covered by AC-named tests, contracts exercised by a consumer.
-  Ready to merge.
+trace-check origin/feature...HEAD: 9 added, 4 removed (net +5) · 9 traced · 0 untraced
+Reviewers: All ACs covered by AC-named tests at the boundary, contracts exercised by
+  a consumer, net +5 explained (5 ACs, no shadows). Ready to merge.
 
 Done!
 ```
 
-## Advantages
+## Parallel safety
 
-**vs. Manual execution:**
-- Subagents follow TDD naturally
-- Fresh context per task (no confusion)
-- Subagent can ask questions (before AND during work)
-
-⚠ **Not parallel-safe by default.** An earlier version of this list claimed
+⚠ **Not parallel-safe by default.** An earlier version of this skill claimed
 "subagents don't interfere". They do: two MUTATING agents in one working tree
 produce silent false greens, not conflicts — see "One working tree, one mutating
 agent". Parallelism is safe only across separate worktrees, or between readers.
-
-**vs. Executing Plans:**
-- Same session (no handoff)
-- Continuous progress (no waiting)
-- Review checkpoints automatic
-
-**Efficiency gains:**
-- No file reading overhead (controller provides full text)
-- Controller curates exactly what context is needed
-- Subagent gets complete information upfront
-- Questions surfaced before work begins (not after)
-
-**Quality gates:**
-- Self-review catches issues before handoff
-- One code-quality review per task, tiered to what the task risks
-- Bounded fix loop (3 rounds, then adjudication) — loops terminate
-- Binding gates measured once per SHA, and once more at the PR boundary
-- The goal check measures value, not just correctness
-
-**Cost:**
-- More subagent invocations (implementer + one or two reviewers per task, by tier)
-- Controller does more prep work (extracting all tasks upfront)
-- Review loops add iterations
-- But catches issues early (cheaper than debugging later)
 
 ## Red Flags
 
@@ -762,6 +762,8 @@ agent". Parallelism is safe only across separate worktrees, or between readers.
 - Skip review loops (reviewer found issues = implementer fixes = review again)
 - Let implementer self-review replace actual review (both are needed)
 - Move to next task while any assigned review has open issues
+- Answer a finding or a surviving mutant with a NEW test while an existing test claims the behaviour — strengthen it
+- Accept a report that counts tests added but not deleted, or a PR whose net test growth nobody explained
 
 **If subagent asks questions:**
 - Answer clearly and completely — with the property and its failing test, not a mechanism (see "Rule on the property, not the mechanism")
