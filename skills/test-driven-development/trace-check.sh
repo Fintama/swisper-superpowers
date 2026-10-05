@@ -58,6 +58,8 @@ if [ "${1:-}" = "--self-test" ]; then
     expect 0 1 "multi-line title, traced"        k.test.ts "$(printf "it(\n  'FM-1: unknown coupon is refused',\n  f)")"
     expect 1 1 "test.each table, untraced title" h.test.ts "$(printf "test.each([\n  [1, 2],\n])('adds %%s', f)")"
     expect 0 1 "test.each table, traced title"   i.test.ts "$(printf "test.each([\n  [1, 2],\n])('B-AC-3: adds %%s', f)")"
+    expect 1 1 "it.each(X)( title on next line, untraced" m.test.ts "$(printf "it.each(cases)(\n  'adds %%s',\n  f)")"
+    expect 0 1 "it.each(X)( title on next line, traced"   n.test.ts "$(printf "it.each(cases)(\n  'B-AC-3: adds %%s',\n  f)")"
     expect 1 1 "it.each template table, untraced" l.test.ts "$(printf "it.each\`\n  a | b\n  \${1} | \${2}\n\`('adds \$a', f)")"
     expect 0 0 "removing a test is not adding one" b.test.ts ""
     expect 0 0 "non-test file is ignored"        src/x.ts "it('not a test file', f)"
@@ -142,7 +144,12 @@ file == "" { next }
         x = s; sub(/^[ \t]*(it|test)[^(`]*/, "", x)
         if (s ~ /\.each[ \t]*[(`]/) {
             # test.each([...])("title", fn) — the title follows the table
-            if (match(x, /\)[ \t]*\(/)) { t = first_literal(substr(x, RSTART + RLENGTH)); record(sign, file, ln, t, prev_add) }
+            if (match(x, /\)[ \t]*\(/)) {
+                rest = substr(x, RSTART + RLENGTH)
+                # it.each(X)(  — the formatter put the title on the next line
+                if (rest ~ /^[ \t]*$/) { pend = "call"; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
+                else record(sign, file, ln, first_literal(rest), prev_add)
+            }
             else { pend = "each"; pend_sign = sign; pend_ln = ln; pend_prev = prev_add }
         } else {
             sub(/^\(/, "", x)
