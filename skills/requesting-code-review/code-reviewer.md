@@ -61,7 +61,8 @@ Task tool (general-purpose):
     **AC coverage (binding when the plan/spec uses Given/When/Then ACs):**
     - Every B-AC-N (business) and T-AC-N (technical) the PR claims to verify has a test whose name includes the AC ID verbatim (e.g., `test('T-AC-9: healthz returns 200 with body', ...)`)
     - The test asserts the AC's Then-clause condition with real data, not against mocks of the system under test
-    - Business ACs are exercised by integration / E2E tests; technical ACs by unit / contract / CI-step tests
+    - Each AC is proved at the boundary where it is received (route/API response, rendered UI, persisted state); a unit test only for a pure-core table/property test, an invariant, or a failure mode the boundary cannot reach
+    - **Every test in the diff names an AC / INV / FM id** (`trace-check.sh` from `test-driven-development`, over BASE..HEAD). Untraced or mechanism-only tests (mock-call counts, constants, source greps, a unit test re-proving a boundary test) are **Important**, disposition *strengthen* or *delete* — never "keep for coverage"
     - TDD evidence: failing-test commit precedes the passing-test commit (visible via `git log -p`). If the diff shows tests added in the same commit as the implementation, OR after, that's a TDD violation — flag as Critical and request the implementer demonstrate the failing-test ran and failed for the right reason.
 
     **TDD anti-patterns (per `superpowers:test-driven-development/testing-anti-patterns.md`):**
@@ -100,8 +101,8 @@ Task tool (general-purpose):
 
     **Testing:**
     - Tests verify real behavior, not mocks of the system under test?
-    - Edge cases covered?
-    - Integration tests where they matter?
+    - A gap you find (an unproved edge, a surviving mutant) → "strengthen `<existing test>`"; request a new test only when none sits at the right altitude, and name its id
+    - Net test growth explained — and lower tests a new higher one covers are deleted in this PR?
     - All tests passing?
     - **If frontend was touched** (any UI / page / route / asset file in the diff): a Playwright (or equivalent E2E) test exists that drives the browser AND asserts the back-end effect. Frontend unit tests against a mocked backend do NOT satisfy this — flag as Critical if missing.
     - Property-based tests for invariants where the project's quality bar requires them (e.g., Polis-bar I1–I5)?
@@ -185,7 +186,7 @@ Task tool (general-purpose):
 ```
 ### Strengths
 - Clean database schema with proper migrations (db.ts:15-42)
-- Comprehensive test coverage (18 tests, all edge cases)
+- Every AC proved at the route, each test named for its AC (tests +4 −2, trace-check PASS)
 - Good error handling with fallbacks (summarizer.ts:85-92)
 
 ### Issues

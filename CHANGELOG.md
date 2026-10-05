@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tests prove value, not volume** (Heiko, 2026-10-05: "I don't want useless tests … 15000 tests seem an
+  overkill"). Measured on Foundry main: ~21,500 test cases, ~18% naming an AC, ~18k backend tests on every merge.
+  - `test-driven-development` rewritten around R1–R8: a test proves a promise at the altitude it is received; its
+    title names an AC / INV / FM id or it is not written; unit tests only for a pure-core table/property, an
+    invariant or a hard-to-reach failure mode; **the test pyramid is replaced** by boundary-first; the plan names
+    the tests; strengthen before add; delete what a higher test covers, and report added / strengthened / deleted.
+    SKILL.md 767 → ~340 lines; pipeline, contract and mutation tooling moved to `toolchain-matrix.md`.
+  - New `test-driven-development/trace-check.sh`: lists new tests whose title names no id and exits 1
+    (`trace-allow: <reason>` escape; `--self-test` positive control; added/removed/net counts).
+  - `subagent-driven-development` (R9): dispatches carry the plan's named test list; fix rounds and surviving
+    mutants strengthen an existing test; reviewers flag untraced or mechanism-only tests as Important with
+    strengthen-or-delete; reports and ledger lines count tests added / strengthened / deleted.
+  - Aligned so no skill still teaches the old mapping: `requesting-code-review/code-reviewer.md`, `writing-plans`
+    (test altitude rule), `verification-before-completion` (test-level check).
+  - DIVERGENCE.md: 4 rows guard the new rules.
+
 ## [1.7.0] - 2026-10-05
 
 ### Changed

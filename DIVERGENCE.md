@@ -55,11 +55,15 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `writing-plans` | `may_edit` | The mechanism that makes the previous row checkable. |
 | `writing-plans` | `plan-check.sh` | Mechanical coverage checks, so review spends its attention on judgement. |
 | `test-driven-development` | `AC-ID test naming` | A test names the criterion it proves, so coverage is greppable. |
-| `test-driven-development` | `proving-acs` | A business AC is asserted at **promise** altitude — what the user receives. |
+| `test-driven-development` | `proving-acs` | A test is asserted at **promise** altitude — what the user receives. Since 2026-10-05 the method for every test, not only B-ACs. |
 | `test-driven-development` | `Functional Core, Imperative Shell` | The design rule that makes tests possible instead of a fight. |
 | `test-driven-development` | `test tiers` | core / gate / extended, so the inner loop stays fast enough to be used. |
+| `test-driven-development` | `Tests prove promises` | R1–R7 (Heiko, 2026-10-05: "I don't want useless tests"): every test names its AC / INV / FM id or is not written; unit tests are the exception; boundary first, **replacing the test pyramid**; strengthen before add; delete what a higher test covers. Measured: Foundry main ~21,500 tests, ~18% naming an AC; a baseline agent wrote 11 untraced unit tests beside 7 route tests for one route. |
+| `test-driven-development` | `trace-check.sh` | R8 — the mechanical half of the naming rule: lists new tests whose title names no id, exits 1; `--self-test` is its positive control. The file is checked as well as the prose. |
+| `test-driven-development` | `Strengthen before you add` | R6 — a finding or surviving mutant is fixed by strengthening an existing test. Measured 2026-10-05: three findings answered with 8 new tests, 0 strengthened, 0 deleted. |
 | `subagent-driven-development` | `mock scaffold` | The approved scaffold is the binding basis for any screen. |
 | `subagent-driven-development` | `boundary review` | Review per PR boundary, not per task. |
+| `subagent-driven-development` | `strengthened before added` | R9 — the dispatch carries the plan's named test list; fix rounds strengthen; the reviewer's disposition for an untraced test is strengthen or delete; every report counts tests added / strengthened / deleted from `trace-check.sh`. |
 | `systematic-debugging` | `observability where it exists` | Use the instrumentation the system already has before adding more. |
 | `executing-plans` | `merge gate` | A phase is not done until its gate passes. |
 | `brainstorming` | `creating-screen-mocks` | A user-visible surface gets an approved mock BEFORE the spec describes it. |

@@ -154,8 +154,8 @@ This skill is the **enforcer at the per-PR merge gate** defined in `superpowers:
    ```
 
 3. **Test level appropriate** — confirm by reading the test file:
-   - Business AC tests are integration / E2E
-   - Technical AC tests are unit / contract / CI-step
+   - Each AC test asserts at the boundary where the promise is received (route/API response, rendered UI, persisted state); unit tests only for the `test-driven-development` R3 exceptions
+   - `trace-check.sh <base>..HEAD` (in `test-driven-development`) is green: no new test without an AC / INV / FM id
    - If the PR touched a frontend file, a Playwright spec exists, drives the browser, AND asserts a back-end effect
 
    Confirm frontend-touch via:

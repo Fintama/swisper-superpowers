@@ -62,6 +62,11 @@ Subagent (general-purpose):
     specific doubt that no existing run answers — and then a focused test,
     never a package-wide suite.
 
+    A fix that closed a test gap by ADDING a test while an existing test
+    already claimed the behaviour, or added a test whose title names no
+    AC / INV / FM id, is new breakage (Important): strengthen the existing
+    test instead, or name the id.
+
     ## Output Format
 
     Your final message is the report itself: begin directly with the first

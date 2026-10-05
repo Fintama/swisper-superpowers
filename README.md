@@ -28,7 +28,7 @@ Full details, verification and migration notes: **[INSTALL.md](INSTALL.md)**.
 | `creating-screen-mocks` | Design a user-visible surface as real, typechecked React composing the real design system — the mock *is* the spec. |
 | `writing-plans` | Decompose a spec into PRs with explicit per-PR authority and merge gates. |
 | `executing-plans` · `subagent-driven-development` | Work the plan, one bounded task at a time, reviewed at PR boundaries. |
-| `test-driven-development` | RED-GREEN-REFACTOR, plus AC-ID naming, test tiers and a toolchain matrix per language. |
+| `test-driven-development` | RED-GREEN-REFACTOR where every test proves a promise: named for its AC, invariant or failure mode, asserted where the user receives it, checked by `trace-check.sh`. Unit tests are the exception. |
 | `systematic-debugging` | Find the cause before changing anything; use the observability the system already has. |
 | `requesting-code-review` · `receiving-code-review` | Review prompts that produce findings rather than compliments. |
 | `verification-before-completion` · `finishing-a-development-branch` | Prove it works before saying it does. |

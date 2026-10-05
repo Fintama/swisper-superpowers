@@ -45,6 +45,20 @@ Task tool (general-purpose):
     the declared states. If the scaffold cannot carry the behaviour, stop and
     report — do not restructure it.
 
+    ## The tests this task owns
+
+    [CONTROLLER: paste the plan's named test list for this task — one per AC, plus
+     the invariants and failure modes it lists, each with its altitude. Example:
+       B-AC-1  route  POST /orders then GET — total per tier rule, rounded
+       B-AC-2  route  expired coupon → 422, store unchanged
+       FM-1    route  unknown coupon → 422, store unchanged
+       INV-1   property over generated orders
+     If the plan names no tests for this task, that is a plan gap — say so here.]
+
+    **This list is the job.** A test beyond it is allowed only when you name the
+    AC / INV / FM id it proves in its title, its commit message and your report. A
+    test that can name none is not written.
+
     ## Context
 
     [Scene-setting: where this fits, dependencies, architectural context]
@@ -65,9 +79,9 @@ Task tool (general-purpose):
     1. **Invoke `superpowers:test-driven-development`** before writing any production code. TDD is binding for new features, bug fixes, refactors, and behavior changes — not optional. The exceptions (throwaway prototypes, generated code, configuration files) require the controller's explicit approval.
     2. Implement exactly what the task specifies
     3. Write tests FIRST per TDD (RED → verify fails for the right reason → GREEN → REFACTOR)
-    4. **Read `superpowers:test-driven-development/proving-acs.md` before writing any AC-mapped test.** The AC ID in a test name is a label, not proof. A B-AC's assertion belongs on what the USER receives — rendered text, the response a client consumes — never on the function that computes it, and the expected value comes from arranged ground truth, never from the string the code produces. Gate question: *could this test pass while the user is told something false?* (Measured: 7,800 green tests, four user-visible bugs found by clicking.)
-    5. **AC-ID test naming when applicable:** if the task verifies any acceptance criteria with an ID (e.g., B-AC-1, T-AC-9), the test name MUST include the AC ID verbatim — `test('T-AC-9: healthz returns 200 with body', ...)`. Each AC gets at least one named test.
-    6. **Test level discipline:** business ACs → integration / E2E tests; technical ACs → unit / contract / CI-step tests. If frontend was touched, a Playwright (or equivalent) front-to-back E2E test is required — frontend unit tests against a mocked backend do NOT satisfy this.
+    4. **Read `superpowers:test-driven-development/proving-acs.md` before writing any test.** A test proves a promise where it is received — the route/API response, the rendered UI, the persisted state the next step reads — never on the function that computes it, and the expected value comes from arranged ground truth. Gate question: *could this test pass while the user is told something false?* (Measured: 7,800 green tests, four user-visible bugs found by clicking.)
+    5. **Every test title names what it proves:** `B-AC-n` / `T-AC-n` / `UBER-AC-n`, `INV-x`, or `FM-x`. "pricing:", "spec §4", "edge case" are not ids. No id → don't write it.
+    6. **Boundary first; unit tests are the exception** — only one table-driven or property test of a pure core with too many combinations for the boundary, an invariant, or a failure mode the boundary cannot reach. Never getters, wiring, mock-call counts, constants, source greps, "stays removed". If frontend was touched, the business AC is proved in a real browser, front to back.
     7. Verify implementation works (run the test command; do NOT trust your prediction of pass/fail — invoke `superpowers:verification-before-completion`)
     8. Commit your work — the failing-test commit MUST precede the passing-test commit. This is the TDD evidence reviewers check via `git log -p`.
     9. Self-review (see below)
@@ -274,9 +288,10 @@ Task tool (general-purpose):
     - **Test level appropriate:** business ACs in integration/E2E? Technical ACs in unit/contract/CI-step tests? Frontend touched → Playwright front-to-back E2E in place?
     - **No new escape hatches:** did I add any `: any`, `as any`, `// @ts-ignore`, `// eslint-disable` to make a test pass? If yes, that's wrong — fix the design, not silence the type system.
     - **No retry-on-flake:** did I add retries / sleeps / `pass-on-second-try` config to make a flaky test green? Flaky tests are bugs — fix or delete, never paper over.
-    - Are tests comprehensive (happy path + at least one negative path / failure mode per public surface)?
-    - **No test bloat:** does every test I wrote trace to an AC, a spec invariant, or a documented failure mode? Delete any that trace to none (test-for-test's-sake / coverage theater) — more tests is not better; high-signal tests are.
-    - **No duplicate tests:** before adding a test, did I check an existing one doesn't already cover the behavior? In prism-indexed repos: `prism search "<AC-ID>"` / `prism find-refs "<symbol-under-test>"`. If coverage exists, extend it rather than adding a near-duplicate.
+    - **The plan's list, and nothing untraced:** every test on the list exists at its altitude; every other test I added names its id. Run `bash <tdd-skill>/trace-check.sh <base>..HEAD` and fix every UNTRACED line — rename it only if the test really proves that id; otherwise delete it.
+    - **Strengthen before add:** for each test I added, did an existing test already claim that behaviour? Then I should have strengthened that one instead (`prism search "<AC-ID>"` / grep).
+    - **Delete what is now covered:** did my higher-altitude test make lower tests redundant? Delete them in this task.
+    - **Each documented failure mode** the task lists has one boundary test.
 
     If you find issues during self-review, fix them now before reporting.
 
@@ -286,8 +301,8 @@ Task tool (general-purpose):
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
     - What you implemented (or what you attempted, if blocked)
     - **TDD evidence:** commit SHAs for the failing-test commit AND the passing-test commit, in order. If multiple TDD cycles ran (one per AC), list each cycle's pair.
-    - **AC coverage:** which AC IDs (B-AC-N / T-AC-N) you verified, with the test name and file path for each.
-    - **Test level:** for each AC, whether it's verified by unit / contract / integration / E2E test.
+    - **Tests:** one line per test touched — `added | strengthened | deleted`, id, title, file, altitude (route / browser / property / unit-R3). Then `Tests +a ~s −d`, and the `trace-check.sh` summary line verbatim. Any net growth beyond the plan's list: say which promise each extra test proves.
+    - **AC coverage:** each AC / INV / FM on the plan's list → the test that proves it.
     - **Frontend touched?** Yes/No. If yes, Playwright spec file path and a one-line summary of what it drives + asserts (front-to-back).
     - What you tested and test results (full output snippet, not summary — the controller verifies independently)
     - Files changed
