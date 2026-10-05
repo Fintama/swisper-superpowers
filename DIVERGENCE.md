@@ -38,6 +38,8 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `creating-screen-mocks` | `verify-review-loop.mjs` | The gate that can fail on a missing review loop. Every other verification item passed on an unreviewable mock, so the verify phase was blind to the one omission that matters. |
 | `update-documentation` | `RE-VERIFY ONLY` | The per-page decision before a PR: update, re-verify only, new page or nothing. Measured 2026-10-04: without it an agent skipped the re-verify stamp on a bug fix ("WARN mode, I'll record the re-read in the PR text"). |
 | `update-documentation` | `page-standard.md` | The page format, the pyramid and the findings entry, summarised for the writer. SKILL.md sends the agent there before any edit, so the file must survive with the prose. |
+| `running-a-programme` | `Rule on the property, not the mechanism` | The PM states what must be true plus a failing test; the lane picks the mechanism, and a named mechanism is probed first. Measured 2026-10-05: three unprobed mechanism rulings were wrong, each a fix round plus a re-review. |
+| `running-a-programme` | `Ship to main by value` | A proven goal goes to main at once, never held behind an unfinished one. Measured 2026-10-05: goal 1 was proven hours before any of it could reach main. |
 | `creating-screen-mocks` | `isTrusted` | `select-client` ignores scripted clicks so automation cannot clobber the reviewer's selection — and an agent that tries one sees nothing and debugs working code. Documented where it is met, not only inside the file. |
 
 ## Skills we substantially extended
@@ -69,6 +71,16 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `writing-plans` | `Swisper_Documentation` | Plans are saved in `plans/<product>/` of the docs home, and deferred work goes to Jira, not a backlog section. Same ruling. |
 | `update-documentation` | `Why it is like this` | ADRs are dropped: a non-obvious decision is recorded on the architecture page it shaped. Technical debt goes to Jira with the finding number. Same ruling. |
 | `subagent-driven-development` | `update-documentation` | The PR-boundary review runs it, so no PR leaves the boundary with stale architecture pages. |
+| `subagent-driven-development` | `no-op draft PR` | Before task 1, prove CI grades PRs into the integration branch and is green. Measured 2026-10-05: three CI round trips came from the base (an ungraded branch, a release-version gate, a test-count floor). |
+| `subagent-driven-development` | `Rule on the property, not the mechanism` | Fix rounds and answers state the property and a failing test; a named mechanism is probed first. Same measurement as the `running-a-programme` row. |
+| `subagent-driven-development` | `One PR per wave` | Parallel tasks in their own worktrees merge locally (`--no-ff`) into one wave branch; CI runs once per wave. Measured 2026-10-05: 6 PRs later combined into 2, with shared-file conflicts and CI re-runs. |
+| `subagent-driven-development` | `once, at the end of the wave PR` | Generated and shared files (OpenAPI spec + changelog, package CHANGELOGs, version bumps, architecture pages) are written once per wave, never per task or fix round. Measured 2026-10-05: ~45 pages re-anchored after every fix round. |
+| `subagent-driven-development` | `Helpers stay inside their own worktree` | Helpers keep to their own worktree and scratch dir, never touch shared tool installs, never delete others' files, never print env. Measured 2026-10-05: a shared uv Python overwritten, a peer's screenshots deleted, env tokens printed. The prompt text lives in `implementer-prompt.md` and `code-reviewer.md`; this row guards the SKILL.md pointer to it. |
+| `writing-plans` | `One PR per wave` | The plan decomposes by wave, one PR each; split only for an independent ship to main or a different approver. Same measurement as above. |
+| `writing-plans` | `once, at the end of the wave PR` | Shared and generated files are the wave's last task. Same measurement as above. |
+| `writing-plans` | `Ship to main by value` | A main merge is planned after each goal's first-delivery wave. Same measurement as the `running-a-programme` row. |
+| `requesting-code-review` | `at the FIRST push` | Draft PR plus `@codex review` at the first push, so automated findings arrive with the first CI run. Measured 2026-10-05: four helvetiq PRs got valid Codex findings after CI was green; drafts are not auto-reviewed. |
+| `finishing-a-development-branch` | `gh pr ready` | An existing draft from the first push is marked ready, not duplicated. |
 
 ## Rows deliberately NOT in this table
 

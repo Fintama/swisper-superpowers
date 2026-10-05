@@ -130,6 +130,8 @@ git branch -d <feature-branch>
 
 #### Option 2: Push and Create PR
 
+If a draft PR already exists from the first push (`requesting-code-review`), push and mark it ready (`gh pr ready`) instead of creating one.
+
 ```bash
 # Push branch
 git push -u origin <feature-branch>

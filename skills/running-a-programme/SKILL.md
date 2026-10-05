@@ -68,6 +68,11 @@ A lane sends you context, options, and a recommendation (that is what
    named assumption beats a perfect one tomorrow.
 4. **Say which goal drove it.** The lane needs the reason, not just the verdict —
    it will face the next twenty variants of this alone.
+5. 🔴 **Rule on the property, not the mechanism.** State what must be true and add
+   or name a test that fails today; the lane chooses how. If you must name a
+   mechanism, probe it first (≤5 minutes: a scratch script or a failing test).
+   *Measured 2026-10-05: three of the lead's mechanism rulings were wrong, each a
+   fix round plus a re-review.*
 
 **If it is genuinely the human's call** — a goal change, a scope trade, a cost
 they should own — pass it up in the three-part frame, with your own
@@ -115,6 +120,11 @@ Before you say yes:
 - [ ] You can name which Mission Goal this milestone moves.
 
 ⚠ **Urgency is an argument for deciding fast, never for skipping the decision.**
+
+🔴 **Ship to main by value.** As soon as one goal is proven, that batch goes to main.
+A proven goal is never held for an unfinished one; "perfect" is several releases, not
+one. *Measured 2026-10-05: goal 1 (plan limits) was proven on the rig hours before any
+of it could reach main, because everything was batched behind later goals.*
 
 ---
 
