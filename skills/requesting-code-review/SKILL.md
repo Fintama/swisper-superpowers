@@ -21,6 +21,21 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 - Before refactoring (baseline check)
 - After fixing complex bug
 
+## The automated PR reviewer — at the FIRST push, not after green
+
+🔴 **Open the PR as a DRAFT at the first push and request the automated reviewer then**,
+so its findings arrive alongside the first CI run. GitHub with the Codex connector:
+comment `@codex review` on the draft, then confirm it fired (👀 reaction, then a
+"Codex Review Summary" comment naming the commit).
+- **A draft is not reviewed on its own.** Measured 2026-10-05 on Fintama/helvetiq:
+  Codex reviewed only on "PR opened" (non-draft) or "Draft marked ready"; drafts #2494,
+  #2514 and #2536 got nothing, and #2511 got its first review only when marked ready.
+  The `@codex review` comment trigger is in the bot's own help text but had never been
+  used in that repo — **unconfirmed until you see it fire.**
+- Marking the draft ready later re-reviews the final diff on its own.
+*Measured 2026-10-05: helvetiq #2535, #2539, #2543 and #2544 each got valid Codex P2
+findings AFTER CI was green — one more cycle each.*
+
 ## How to Request
 
 **1. Get git SHAs:**

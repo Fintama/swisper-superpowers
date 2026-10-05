@@ -30,6 +30,12 @@ Task tool (general-purpose):
     git diff {BASE_SHA}..{HEAD_SHA}
     ```
 
+    🔴 **Stay inside the worktree under review and your own scratch subdirectory.**
+    Never install into or write through shared tool installs (a uv-managed Python,
+    shared venvs, global caches), never delete files you did not create, and never
+    print environment variables. *Measured 2026-10-05: a reviewer printed env
+    tokens into its transcript.*
+
     ## Code Navigation (use prism for context; git diff for the change)
 
     The git diff above is the source of truth for WHAT changed. Use the `prism` CLI to

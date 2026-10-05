@@ -75,6 +75,15 @@ Task tool (general-purpose):
 
     Work from: [directory]
 
+    🔴 **Stay inside your own worktree and scratch space.** Work only in the
+    directory above and your own scratch subdirectory ([CONTROLLER: path]).
+    Never install into, or write through, shared tool installs — a uv-managed
+    Python, shared venvs, global caches. Never delete files you did not create.
+    Never print environment variables (no bare `env`, `printenv`, `set`).
+    *Measured 2026-10-05: a helper overwrote the machine's shared uv Python and
+    every venv needed repair; another deleted a peer's screenshots in the shared
+    scratchpad.*
+
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.
 

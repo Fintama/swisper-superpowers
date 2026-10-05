@@ -277,6 +277,12 @@ delivered in: PR-7" would have been on the first page of the plan.
 cache. Serve the happy path. Those are follow-up PRs, and they are far cheaper to
 prioritise once the user has seen the thing working.
 
+🔴 **Ship to main by value, too.** As soon as one goal is proven, that batch goes to
+main — plan a main merge after each goal's first-delivery wave. A proven goal is never
+held for an unfinished one; "perfect" is several releases, not one.
+*Measured 2026-10-05: goal 1 (plan limits) was proven on the rig hours before any of it
+could reach main, because everything was batched behind later goals.*
+
 ## PR decomposition + branching model (Standard / Programme — a Sketch skips this)
 
 A Standard or Programme plan is not just a task list — it is a **PR decomposition** with explicit branching and merge gates. **A Sketch plan skips this whole section**: one sub-branch, one merge gate at the end, taken from the PR-K gate below. The implementation runs on:
@@ -330,7 +336,7 @@ Without it every word of a plan reads as normative, which produces both failure 
 
 ### Required: contention — resolved here, or discovered at 2am
 
-**Two PRs in the same wave that can touch the same file are not parallel.** List every path touched by more than one PR and how it was resolved:
+**Two tasks (or PRs) in the same wave that can touch the same file are not parallel.** List every path touched by more than one PR and how it was resolved:
 
 | path | touched by | resolution |
 |---|---|---|
@@ -342,7 +348,9 @@ Resolutions are: `same PR` · `serialised` · `seam moved` · `extracted`. **`mu
 
 ### Required: waves, freeze points, and the migration slot
 
-- **Every wave states why its PRs are safe together** — in one line, naming the fact that makes it true ("disjoint owned files; both consume the response shape frozen in wave 1"). A wave with no stated reason is an assertion of safety with nothing behind it.
+- 🔴 **One PR per wave.** The wave's tasks run in parallel, each in its own worktree, each reviewed per task; they merge locally into one wave branch (`--no-ff`, so the reviewed history is kept) and CI runs ONCE per wave. Split into separate PRs only when an item must ship to main independently, or needs a different approver. Contention and `must_not_edit` below then apply between the wave's tasks. *Measured 2026-10-05: 6 separate PRs, each with its own CI, were later combined into 2 — conflict resolution in shared files (architecture pages, the OpenAPI changelog, the regenerated spec, the package CHANGELOG) and CI re-run.*
+- 🔴 **Generated and shared files: once, at the end of the wave PR** — the regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps; architecture pages per `update-documentation`. Plan them as the wave's last task: never per task, never per fix round, never in parallel branches. *Measured 2026-10-05: ~45 pages re-anchored after every fix round and rebase; the shared files conflicted when PRs were combined.*
+- **Every wave states why its tasks are safe together** — in one line, naming the fact that makes it true ("disjoint owned files; both consume the response shape frozen in wave 1"). A wave with no stated reason is an assertion of safety with nothing behind it.
 - **Every dependency the spec marked stubbable gets a freeze point** — the contract is published before the wave that stubs against it. That is what turns "B needs A" from a wave boundary into two PRs running at once. Only the spec author knows which dependencies are stubbable; if the spec did not say, assume not, and raise it.
 - **One exclusive migration slot per release**, ordered against the PRs that need it. Two PRs writing migrations in the same window collide on numbering at merge, not at write time, which is the expensive moment to find out.
 
@@ -352,7 +360,7 @@ Resolutions are: `same PR` · `serialised` · `seam moved` · `extracted`. **`mu
 
 1. **It leaves the main line green and releasable** — behind a flag if it must be.
 2. **It delivers at least one complete business promise end to end, OR unblocks at least two later PRs.** A PR that does neither is a layer, not a slice.
-3. **One owner, and no file shared with another PR in its wave.**
+3. **One owner, and no file shared with another task or PR in its wave.**
 4. **It is describable in one sentence.** If it needs two, it is two PRs — or one PR with a confused boundary, which is worse.
 
 🔴 **Never split for parallelism alone.** A split must buy a removed wave boundary, an isolated gate, or a genuinely independent owner. **Wall-clock is not a reason:** the overhead of the second pull request — review, checks, quality gates, a reviewer's context switch — reliably exceeds the time the parallelism saves, and you get the merge conflict for free.

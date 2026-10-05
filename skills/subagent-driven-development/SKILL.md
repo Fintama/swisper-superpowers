@@ -189,6 +189,18 @@ in the open, before task 1, and tell your human partner which you chose.
 "typecheck green" is a false claim, and it is the easiest one to make by
 accident.
 
+### And confirm CI GRADES the integration branch — one no-op draft PR
+
+🔴 **Before task 1, open one no-op draft PR into the integration branch** — a
+comment-only change in a path your tasks will touch, so `paths:` filters see it.
+Confirm the workflows actually run for PRs into that branch (their `branches:` and
+`paths:` filters) and come back green, then close it. Not graded, or red, is task
+zero — the same rule as a red local gate.
+*Measured 2026-10-05 (helvetiq model layer): three CI round trips came from the
+base, not our code — PRs into `feature/model-layer` were not graded at all (the
+workflow branch filter), a release-version gate blocked every PR after a release,
+and a test-count floor tripped.*
+
 ## One working tree, one mutating agent
 
 **Readers may share a checkout. Mutators may not.** A reviewer running alongside
@@ -233,6 +245,15 @@ task's contract.
 *(Measured 2026-08-13: a five-task PR ran almost entirely in sequence because the one-mutator
 rule was read as "queue them". Two of those tasks touched entirely disjoint directories and could
 have run together from the first minute.)*
+
+🔴 **Helpers stay inside their own worktree and scratch space.** Every implementer and
+reviewer dispatch carries the sandbox rules in `implementer-prompt.md` and the
+reviewer template: own worktree and own scratch subdirectory only; never install into
+or write through shared tool installs (a uv-managed Python, shared venvs, global
+caches); never delete files they did not create; never print environment variables.
+*Measured 2026-10-05: a helper overwrote the machine's shared uv Python 3.12 and every
+venv needed repair; a helper deleted another agent's screenshots in the shared
+scratchpad; a reviewer printed env tokens into its transcript.*
 
 If you inherit contention: back the work up
 outside the tree, wait for zero test processes **and** a clean target file, stage
@@ -507,6 +528,16 @@ never extend the loop.
 
 **Never fix findings yourself in the controller session** — your context stays clean for coordination, and controller fixes skip review entirely.
 
+### Rule on the property, not the mechanism
+
+🔴 **In a fix round, and when answering an implementer's question, state what must be
+true and add or name a test that fails today; the implementer chooses how.** If you
+must name a mechanism, probe it first — ≤5 minutes, a scratch script or a failing test.
+*Measured 2026-10-05: three of the lead's mechanism rulings were wrong, each a fix round
+plus a re-review — a stream drain placed inside the deadline turned finished answers
+into failures; a fence scan "first `{` or `[`" returned the wrong span; "strip `top_k`
+from all rows" was too broad, because one wire sends it.*
+
 ### The breaker
 
 When round 3's re-review still leaves findings open, **stop dispatching** and adjudicate each one yourself — you hold the plan and the cross-task context the reviewer lacks:
@@ -565,6 +596,8 @@ For a multi-PR plan, organize the per-task loop above by PR:
 
 1. **Before starting a PR:** create the sub-branch named in the PR decomposition row (branch from the feature branch, not from `main`).
 2. **Within the PR:** dispatch the per-task loop (implementer → spec review → code-quality review → mark task complete) for every task the PR claims to cover.
+   🔴 **One PR per wave** (`writing-plans`): the wave's tasks run in parallel, each in its own worktree off the wave branch; once a task's review passes, `git merge --no-ff` it into the wave branch locally, so the reviewed history is kept. Push once — CI runs once per wave, not once per task.
+   🔴 **Generated and shared files: once, at the end of the wave PR** — the regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and the architecture pages (`update-documentation`). Put them under `must_not_edit` in every task dispatch; never per task, never per fix round, never in parallel branches. *Measured 2026-10-05: ~45 pages re-anchored after every fix round and rebase; the shared files conflicted when PRs were combined.*
 3. **After all the PR's tasks are complete and individually reviewed:** run the **PR-boundary review** before suggesting merge.
 
 ### PR-boundary review (mandatory — a single-PR plan runs this once, for the whole branch)
@@ -592,7 +625,7 @@ Then dispatch TWO subagents in sequence (not in parallel — maintainability rev
 
 Apply each review's Critical / High / Important findings before proceeding. Then:
 
-- If the repo has `architecture/tools/impact.py`: run `swisper-superpowers:update-documentation` on the PR's diff — a PR does not leave the boundary with its architecture pages stale
+- Regenerate the shared files once, now (step 2 above), then — if the repo has `architecture/tools/impact.py` — run `swisper-superpowers:update-documentation` on the PR's diff — a PR does not leave the boundary with its architecture pages stale
 - Update the plan's PR decomposition table to mark the PR complete
 - **Suggest merge into the feature branch — do NOT auto-merge**
 - After human / reviewer / project tooling approval, merge the sub-branch into the feature branch
@@ -731,7 +764,7 @@ agent". Parallelism is safe only across separate worktrees, or between readers.
 - Move to next task while any assigned review has open issues
 
 **If subagent asks questions:**
-- Answer clearly and completely
+- Answer clearly and completely — with the property and its failing test, not a mechanism (see "Rule on the property, not the mechanism")
 - Provide additional context if needed
 - Don't rush them into implementation
 

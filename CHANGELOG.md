@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `path::Symbol`, never `file:line`; `covers.symbols` narrows the staleness gate to the functions a page explains;
   re-verifying a symbol anchor needs no re-counting; `FINDINGS.md` evidence stays `file:line` at `first_seen`; docs
   are written once per (combined) PR at the end. Needs the architecture-site tooling from helvetiq #2544.
+- **Seven efficiency rules** (Heiko, 2026-10-05, after the helvetiq model-layer programme took far too long; each
+  rule carries its measurement):
+  1. `subagent-driven-development`: before task 1, a no-op draft PR proves CI grades the integration branch and is green.
+  2. `subagent-driven-development`, `running-a-programme`: rule on the property (plus a failing test), not the
+     mechanism; a named mechanism is probed first (≤5 min).
+  3. `writing-plans`, `subagent-driven-development`: one PR per wave — parallel tasks in worktrees, merged locally
+     `--no-ff`, CI once per wave.
+  4. `requesting-code-review`: draft PR and `@codex review` at the first push (drafts are not auto-reviewed;
+     the comment trigger is unconfirmed in helvetiq); `finishing-a-development-branch` marks the draft ready.
+  5. `writing-plans`, `subagent-driven-development`: generated and shared files once, at the end of the wave PR.
+  6. `writing-plans`, `running-a-programme`: ship to main by value — a proven goal is never held for an unfinished one.
+  7. `implementer-prompt.md`, `code-reviewer.md`: helpers stay in their own worktree and scratch dir, never write
+     through shared tool installs, never delete others' files, never print env.
+- DIVERGENCE.md: 12 rows guard these rules.
 
 ## [1.6.0] - 2026-10-04
 
