@@ -5,36 +5,31 @@ description: Use when completing tasks, implementing major features, or before m
 
 # Requesting Code Review
 
-Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation, never your session's history: that keeps it on the work product, and keeps your own context for the work.
 
 **Core principle:** Review early, review often.
 
 ## When to Request Review
 
-**Mandatory:**
-- After each task in subagent-driven development
-- After completing major feature
+**Always**, including when the change seems simple:
+- After each task in subagent-driven development (executing-plans: after each task or at natural checkpoints)
+- After completing a major feature
 - Before merge to main
 
 **Optional but valuable:**
 - When stuck (fresh perspective)
 - Before refactoring (baseline check)
-- After fixing complex bug
+- After fixing a complex bug
 
 ## The automated PR reviewer — at the FIRST push, not after green
 
-🔴 **Open the PR as a DRAFT at the first push and request the automated reviewer then**,
-so its findings arrive alongside the first CI run. GitHub with the Codex connector:
-comment `@codex review` on the draft, then confirm it fired (👀 reaction, then a
-"Codex Review Summary" comment naming the commit).
-- **A draft is not reviewed on its own.** Measured 2026-10-05 on Fintama/helvetiq:
-  Codex reviewed only on "PR opened" (non-draft) or "Draft marked ready"; drafts #2494,
-  #2514 and #2536 got nothing, and #2511 got its first review only when marked ready.
-  The `@codex review` comment trigger is in the bot's own help text but had never been
-  used in that repo — **unconfirmed until you see it fire.**
+**Open the PR as a draft at the first push and request the automated reviewer then**,
+so its findings arrive alongside the first CI run instead of one cycle after green.
+GitHub with the Codex connector: comment `@codex review` on the draft, then confirm it
+fired (👀 reaction, then a "Codex Review Summary" comment naming the commit).
+- A draft is not reviewed on its own; Codex reviews on "PR opened" (non-draft) or
+  "Draft marked ready". Treat the comment trigger as unconfirmed until you see it fire.
 - Marking the draft ready later re-reviews the final diff on its own.
-*Measured 2026-10-05: helvetiq #2535, #2539, #2543 and #2544 each got valid Codex P2
-findings AFTER CI was green — one more cycle each.*
 
 ## How to Request
 
@@ -56,16 +51,16 @@ Use Task tool with `general-purpose` type. Reviewer evaluates plan alignment, AC
 
 **3. After code review feedback is applied, dispatch maintainability reviewer subagent (template at `maintainability-reviewer.md`):**
 
-Maintainability review runs in sequence after code review (NOT in parallel — it benefits from seeing post-code-review state). Reviewer evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, Comments in the wrong home (per `test-driven-development/clean-code.md`), ADR debt, cross-component drift.
+Run it after code review, not in parallel: code-review fixes resolve some maintainability concerns and create others. Reviewer evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, Comments in the wrong home (per `test-driven-development/clean-code.md`), unrecorded decisions, cross-component drift.
 
-**Additional placeholders for maintainability-reviewer.md:**
-- `{QUALITY_BAR}` - The project's quality-bar text, lifted verbatim (e.g., the Polis-bar §3.1 + concrete enforcement §3.3 from a Foundation-on-Polis spec)
+**Additional placeholder for maintainability-reviewer.md:**
+- `{QUALITY_BAR}` - The project's quality-bar text, lifted verbatim (the spec's quality section, or the repo's coding rules such as `.cursor/rules/`)
 
-**4. Act on feedback:**
-- Fix Critical / High issues immediately (blocks merge)
-- Fix Important / Medium issues before proceeding
-- Note Minor / Low issues for follow-up
-- Push back if reviewer is wrong (with technical reasoning per `superpowers:receiving-code-review`)
+**4. Act on feedback.** Both reviewers use one scale:
+- Critical: fix immediately; blocks merge
+- Important: fix before proceeding
+- Minor: note for follow-up (a Jira ticket when it is real debt)
+- Reviewer wrong? Push back with technical reasoning, show the code or tests that prove it works, or ask for clarification (`swisper-superpowers:receiving-code-review`)
 
 ## Example
 
@@ -94,34 +89,7 @@ You: [Fix progress indicators]
 [Continue to Task 3]
 ```
 
-## Integration with Workflows
+## Templates
 
-**Subagent-Driven Development:**
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
-
-**Executing Plans:**
-- Review after each task or at natural checkpoints
-- Get feedback, apply, continue
-
-**Ad-Hoc Development:**
-- Review before merge
-- Review when stuck
-
-## Red Flags
-
-**Never:**
-- Skip review because "it's simple"
-- Ignore Critical issues
-- Proceed with unfixed Important issues
-- Argue with valid technical feedback
-
-**If reviewer wrong:**
-- Push back with technical reasoning
-- Show code/tests that prove it works
-- Request clarification
-
-See templates:
 - `requesting-code-review/code-reviewer.md` — code review (plan alignment, ACs, contracts, quality, architecture, production readiness)
-- `requesting-code-review/maintainability-reviewer.md` — maintainability review (structural consistency, API discipline, naming, debt, ADR debt, cross-component drift)
+- `requesting-code-review/maintainability-reviewer.md` — maintainability review (structural consistency, API discipline, naming, debt, decision records, cross-component drift)

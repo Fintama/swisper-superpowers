@@ -1,28 +1,13 @@
 #!/usr/bin/env node
 /**
- * render-gate — compare a built screen against its approved mock, mechanically.
+ * render-gate — compare a built screen against its approved mock, joined on data-testid.
  *
- * Replaces "put them side by side and reconcile every difference", which is an
- * eyeball instruction and therefore the first thing to go at 4am.
+ *   node render-gate.mjs --snippet            # print the capture function; run it in both pages
+ *   node render-gate.mjs mock.json built.json # diff two captures  (exit 1 = findings)
  *
- *   node render-gate.mjs --snippet            # print the fingerprint function
- *   node render-gate.mjs mock.json built.json # diff two fingerprints  (exit 1 = findings)
- *
- * TWO HALVES ON PURPOSE. Capturing a fingerprint needs a browser and every
- * environment drives one differently (Playwright, a devtools MCP, the console).
- * Diffing is pure logic and is where the judgement lives — so the diff ships as
- * code and the capture ships as a snippet you run however you can.
- *
- * PROVEN AGAINST PLANTED DEFECTS, 2026-08-28: three deliberate deviations — a
- * font-weight change, a dropped element, an altered label — all three caught,
- * and ten unchanged elements correctly left alone. A gate that flags everything
- * is switched off within a week, so the silence matters as much as the noise.
- *
- * WHAT IT DELIBERATELY DOES NOT DO:
- *   · pixel comparison — different data, viewport and fonts make it permanently
- *     red, and a permanently red gate is a disabled gate.
- *   · "behaves the same" in general — not checkable. Name the two or three
- *     interactions that carry the design intent and assert those separately.
+ * Capture is a snippet because every environment drives a browser differently.
+ * No pixel comparison: data, viewport and fonts differ, so it would never be green.
+ * It does not judge behaviour; assert the few interactions that carry the design separately.
  */
 
 const SNIPPET = `
@@ -33,9 +18,7 @@ const SNIPPET = `
   for (const el of document.querySelectorAll('[data-testid]')) {
     const cs = getComputedStyle(el);
     fp[el.getAttribute('data-testid')] = {
-      // leaf: a container's text is just its children's concatenated, so an
-      // ancestor would re-report every descendant's difference. 3 defects
-      // became 7 findings before this field existed.
+      // Containers' text repeats their children's; only leaves compare text.
       leaf: !el.querySelector('[data-testid]'),
       tag: el.tagName.toLowerCase(),
       role: el.getAttribute('role') || null,

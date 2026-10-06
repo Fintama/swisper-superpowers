@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A2 — `program.yaml`, the sole owner of programme identity. Reader + validator.
+"""`program.yaml`, the sole owner of programme identity: reader and validator.
 
 Shape (spec §1 A2):
 
@@ -10,15 +10,11 @@ Shape (spec §1 A2):
     lanes:   [{name, id, session, scope, worktree, branch,
                rig: {frontend, backend, db, project}}]
 
-Ownership (spec §9): the PM lane is the SOLE WRITER — via `setup-delivery-program`
-at creation, or a deliberate PM edit for a respawn, a new lane or a rig change.
-Any skill or script may READ it. That contract is documentation-only today and
-that is a recorded decision, not an oversight: there is exactly one writer, and a
-guard over a set of size one can never fire. 🔴 The moment a SECOND writer exists,
-the guard is due in that same PR.
+The PM lane is the sole writer (`setup-delivery-program` at creation, or a PM edit for
+a respawn, a new lane or a rig change); anything may read it. Nothing enforces that yet
+because there is one writer; the PR that adds a second writer adds the guard.
 
-⚠ PyYAML is required and macOS's system python3 (3.9.6) does NOT ship it. Every
-entry point here fails with the remediation rather than a bare ImportError.
+Needs PyYAML, which macOS's system python3 lacks; imports fail with the fix, not a bare ImportError.
 """
 
 try:
@@ -68,8 +64,7 @@ def _validate(data):
                  + (f" ({label})" if label else ""))
 
     for i, lane in enumerate(data["lanes"]):
-        # name the lane the way a human would look for it, falling back to the
-        # index — an error that says only "a lane" sends the reader hunting.
+        # name the lane as a human would look for it, falling back to the index
         label = lane.get("name") if isinstance(lane, dict) else None
         where = f"program.yaml: lanes[{i}]" + (f" ({label})" if label else "")
         _require(lane, REQUIRED_LANE, where)

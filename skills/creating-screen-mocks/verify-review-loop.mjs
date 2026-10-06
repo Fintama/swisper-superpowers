@@ -1,55 +1,23 @@
 #!/usr/bin/env node
 /**
- * Is the review loop actually working? Two measurements, no browser.
+ * Is the review loop working? Three checks, no browser.
  *
- *   node verify-review-loop.mjs http://localhost:5173
+ *   node verify-review-loop.mjs <url> [workspace-dir]     e.g. http://localhost:5173 design/mocks/checkout
  *
- * Exits 0 only if the reviewer can genuinely point at things.
+ * Exits 0 only if the entry imports select-client, the served App module carries
+ * source stamps, and POST /__select writes current-selection.json.
  *
- * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────
- *
- * Measured 2026-08-29 (BASELINE-2026-08-29.md): an agent shipped a mock with no
- * review loop and PASSED every item in the skill's verification phase — it
- * typechecked, it positive-controlled the typecheck, it used only real design
- * system components, and it rendered correctly in a browser screenshot. The
- * human then could not click a single element.
- *
- * 🔴 A VERIFICATION PHASE THAT CANNOT FAIL ON THE MOST IMPORTANT OMISSION IS
- * NOT A GATE. This script is the missing assertion.
- *
- * ── 🔴 WHY IT DOES NOT SIMULATE A CLICK, AND YOU MUST NOT EITHER ────────────
- *
- * `select-client.ts` refuses untrusted events:
- *
- *     if (!e.isTrusted) return;
- *
- * That guard is deliberate and load-bearing — a scripted click from browser
- * automation would OVERWRITE `current-selection.json` and silently destroy the
- * reviewer's selection between them clicking and you reading it. So a synthetic
- * click correctly does nothing.
- *
- * The trap this creates, and it cost the measured run real time: an agent
- * verifies by scripting a click, sees nothing happen, and concludes the loop is
- * broken — then debugs working code. It is not broken. It is protecting the
- * human from you.
- *
- * This script therefore checks the two halves it CAN check honestly:
- *   1. the stamp reaches the served source  (sourceStamp is registered)
- *   2. the sink accepts and persists a POST (selectSink is registered)
- * The human's real click is the only thing that can exercise the middle, and
- * that is by design.
+ * It does not simulate a click: select-client ignores untrusted events so automation
+ * cannot overwrite the reviewer's selection. Only a real click exercises that path.
  */
 import { writeFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const base = (process.argv[2] || "").replace(/\/$/, "");
 if (!base) {
-  console.error("usage: node verify-review-loop.mjs <url>   e.g. http://localhost:5173");
+  console.error("usage: node verify-review-loop.mjs <url> [workspace-dir]   e.g. http://localhost:5173");
   process.exit(2);
 }
-/* 🔴 Vite binds `localhost`, which on a dual-stack host may resolve to ::1 only.
-   The measured run checked 127.0.0.1, got a connection refusal, and read the
-   Vite banner printed by the `||` branch as success. Say which name you used. */
 const outDir = process.argv[3] || process.cwd();
 
 let failures = 0;
@@ -89,13 +57,7 @@ if (!entry) {
 
   if (appUrl) {
     const app = await fetch(base + appUrl).then((r) => r.text());
-    /* 🔴 MATCH THE ATTRIBUTE NAME ONLY, NEVER `data-source=`.
-       Measured while building this script: the module Vite serves has ALREADY
-       been through React's JSX transform, so the stamp is a PROP —
-       `"data-source": "src/App.tsx:7"` — and the `=` form never appears. An
-       earlier draft matched `data-source=` and reported "0 stamped" against a
-       perfectly wired workspace, which would have sent agents to debug working
-       code. A verifier that can produce a false red is worse than none. */
+    // Match the name only: the served module is post-JSX-transform, so the stamp is a prop, not `data-source=`.
     const stamps = (app.match(/data-source/g) || []).length;
     if (stamps === 0) {
       bad("0 elements stamped with data-source in the served App module",
@@ -109,7 +71,7 @@ if (!entry) {
 const probe = join(outDir, "current-selection.json");
 const had = existsSync(probe);
 if (had) {
-  /* Never clobber a real selection — that is the very thing isTrusted protects. */
+  // Never overwrite a real selection.
   ok("current-selection.json already exists (a real selection — not overwriting)");
 } else {
   try {
@@ -135,7 +97,7 @@ if (had) {
 console.log(
   failures === 0
     ? "\nreview loop OK — the reviewer can point at elements.\n" +
-      "🔴 Do NOT try to confirm with a scripted click: select-client ignores\n" +
+      "Do not confirm with a scripted click: select-client ignores\n" +
       "   untrusted events on purpose, so it will do nothing and look broken.\n"
     : `\n${failures} check(s) failed — the mock is NOT reviewable yet.\n`
 );

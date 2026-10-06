@@ -1,37 +1,14 @@
 #!/usr/bin/env bash
-#
-# Stand up a mock workspace with the review loop ALREADY WIRED.
+# Stand up a mock workspace with the review loop already wired.
 #
 #   ./init-workspace.sh <workspace-dir> <app-dir>
 #
 #   <workspace-dir>  where the mock goes, e.g. design/mocks/checkout
 #   <app-dir>        the app whose design system and node_modules it borrows,
-#                    e.g. frontendV2  (must contain node_modules/)
+#                    e.g. frontendV2  (must contain node_modules/ and src/)
 #
-# ── WHY THIS SCRIPT EXISTS ──────────────────────────────────────────────────
-#
-# Measured 2026-08-29 (see BASELINE-2026-08-29.md): an agent that hand-wrote the
-# workspace shipped a mock with NO REVIEW LOOP — no `sourceStamp`, no
-# `selectSink`, no client import — so the human could not click a single element.
-# It also picked the wrong worktree, and rediscovered the node_modules and
-# tsconfig answers from scratch.
-#
-# 🔴 THE FIX IS NOT A LOUDER INSTRUCTION. It is having nothing to remember: the
-# config this script writes has the plugins in it, in the right order, and the
-# entry file imports the client. An agent cannot forget a step it never performs.
-#
-# ── WHY node_modules IS SYMLINKED AND NEVER INSTALLED ───────────────────────
-#
-# The skill CANNOT ship node_modules: it is hundreds of MB, it carries
-# platform- and arch-specific binaries (esbuild, rollup), and it would have to
-# match the host app's React/Vite versions or the mock would compose against a
-# different design system than the product. Borrowing the app's is not a
-# shortcut — it is the only way the mock typechecks against the version that
-# actually ships.
-#
-# An `npm install` here is also actively dangerous where a repo shares one
-# node_modules across git worktrees by symlink: installing can rewrite the tree
-# every other worktree is pointing at.
+# node_modules is symlinked, never installed: the mock must compose against the
+# version the app ships, and an install can rewrite a node_modules other worktrees share.
 set -euo pipefail
 
 WS="${1:?usage: init-workspace.sh <workspace-dir> <app-dir>}"
@@ -40,10 +17,7 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 APP_ABS="$(cd "$APP" && pwd)"
 
-# 🔴 THE WORKTREE CHECK, FIRST AND FATAL. The measured failure was a workspace
-# built against a worktree that did not contain the feature — every import
-# resolved to nothing and it surfaced as a Vite error minutes later, after the
-# screens were written. Fail here instead, where it costs one line.
+# A worktree without the feature fails later as an unresolved import; fail here instead.
 [ -d "$APP_ABS/node_modules" ] || {
   echo "✗ $APP_ABS/node_modules does not exist." >&2
   echo "  Point <app-dir> at the worktree that actually has the app installed." >&2
@@ -75,12 +49,7 @@ import react from "@vitejs/plugin-react";
 import { sourceStamp, selectSink } from "./review-loop/vite-plugins";
 
 export default defineConfig({
-  /* 🔴 `sourceStamp()` COMES FIRST and that is not stylistic — it stamps raw
-     JSX before React transforms it out of existence. `enforce: "pre"` also
-     enforces it; the order is written out so nobody "tidies" it later.
-     `selectSink()` serves /__select and /__note. Remove either and the reviewer
-     silently loses click-to-select — the exact defect this scaffold exists to
-     prevent. `verify-review-loop.mjs` fails if you do. */
+  // sourceStamp must run before React's JSX transform; without both plugins nothing is selectable.
   plugins: [sourceStamp(), react(), selectSink()],
 });
 EOF
@@ -93,17 +62,7 @@ cat > tsconfig.json <<'EOF'
     "strict": true, "noEmit": true, "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "//": [
-    "`include` is src/ ONLY, deliberately.",
-    "`review-loop/` is vendored tooling, not part of the specification this mock",
-    "carries. It is Node code (node:fs, node:path, process, IncomingMessage) and",
-    "typechecking it needs @types/node, which the borrowed node_modules may not",
-    "have — and installing it could rewrite a node_modules other worktrees share.",
-    "Nothing is lost: Vite transpiles config and plugins with esbuild, which does",
-    "not typecheck. What MUST typecheck is src/ — the mock IS the implementation",
-    "spec, and a spec promising a prop the design system rejects is the failure",
-    "this gate exists to catch."
-  ],
+  "//": "src/ only: review-loop/ is Node tooling that would need @types/node, which the borrowed node_modules may lack.",
   "include": ["src"]
 }
 EOF
@@ -122,37 +81,27 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./mock.css";
-/* 🔴 THE BROWSER HALF OF THE REVIEW LOOP. Without this import nothing is
-   selectable and the reviewer cannot point at anything — the mock still LOOKS
-   finished, which is why its absence went unnoticed in the measured failure.
-   Dev only: `selectSink` writes current-selection.json beside this workspace. */
+// The browser half of the review loop: without it nothing is selectable.
 import "../review-loop/select-client";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
 EOF
 
 cat > src/mock.css <<EOF
-/* Tailwind, plus the APP'S OWN token/theme entry, imported from the app source
-   so the mock cannot drift from what the product actually paints with. Copying
-   token values in here would create a second source of truth, and the mock
-   would keep passing while the product changed underneath it.
-
-   👉 EDIT THE SECOND IMPORT to your app's real theme/token entry. */
+/* Import the app's own theme entry; never copy token values here.
+   Edit the second import to point at your app's real theme/token entry. */
 @import "tailwindcss";
 @import "$REL_APP/src/styles/global.css";
 EOF
 
 cat > src/App.tsx <<'EOF'
-/* Replace with the index page: the design decisions in one line each, and a
-   link to every screen and variant. Build the index FIRST — a reviewer who has
-   to retype URLs stops exploring, and you lose the feedback the mock exists to
-   collect. */
+// Replace with the index page: the design decisions, and a link to every screen and variant.
 export default function App() {
   return (
     <div className="p-10">
       <h1 className="text-2xl font-semibold">Mock index</h1>
       <p className="mt-2 text-sm opacity-70" data-testid="scaffold-placeholder">
-        Scaffolded with the review loop wired. Click me — the readout should
+        Scaffolded with the review loop wired. Option-click me — the readout should
         appear top-right. If it does not, run <code>verify-review-loop.mjs</code>.
       </p>
     </div>
@@ -178,6 +127,6 @@ cat >&2 <<BANNER
   Next:
     1. point src/mock.css at your app's real theme entry (it guesses global.css)
     2. npx vite --port \$(node -e 'const s=require("net").createServer();s.listen(0,()=>{console.log(s.address().port);s.close()})') --strictPort
-    3. node review-loop/../verify-review-loop.mjs <url>     ← MUST pass before you build screens
+    3. node $SKILL_DIR/verify-review-loop.mjs <url> $WS_ABS     ← must pass before you build screens
 
 BANNER

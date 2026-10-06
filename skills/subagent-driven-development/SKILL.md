@@ -5,25 +5,15 @@ description: Use when executing implementation plans with independent tasks in t
 
 # Subagent-Driven Development
 
-Execute plan by dispatching a fresh subagent per task, with **one** code-quality review after each, and the binding gates run once at the PR boundary.
+Execute a plan by dispatching a fresh subagent per task, with **one** code-quality review after each, and the binding gates measured once per SHA at the PR boundary.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+Subagents never inherit your session's context or history. You construct exactly what each one needs (the full task text, its goal, the gates, its test list), which keeps it focused and keeps your own context free for coordination.
 
-**Core principle:** Fresh subagent per task + one code-quality review + gates measured once per SHA = high quality without paying for the same measurement three times.
-
-**Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
-
-**The four sanctioned stops**, and only these:
-1. BLOCKED you cannot resolve, or ambiguity that genuinely prevents progress
-2. The fix-loop **breaker** ruling that a finding is real and load-bearing
-3. A **base branch that is red** on a gate — task zero or a different base is their call
-4. The **goal check** at a PR boundary, where the surface is user-visible
-
-🔴 **Stop 4 is a real stop and it is easy to skip.** It needs a human in a browser;
-"don't pause between tasks" will tempt you to skip it or to report it from a green
-test run instead. A goal check reported without someone having used the thing is a
-false claim, and it is the specific false claim this whole pipeline exists to
-prevent.
+**Continuous execution.** Don't pause to check in with your human partner between tasks, and don't send "should I continue?" prompts or progress summaries. Stop only for:
+1. A BLOCKED you cannot resolve, or ambiguity that genuinely prevents progress.
+2. The fix-loop **breaker** ruling that a finding is real and load-bearing.
+3. A **base branch that is red** on a gate: task zero or a different base is their call.
+4. The **goal check** at a PR boundary, where the surface is user-visible. It needs a person using the thing in a browser, so it is easy to skip; never skip it and never report it from a green test run.
 
 ## When to Use
 
@@ -45,11 +35,7 @@ digraph when_to_use {
 }
 ```
 
-**vs. Executing Plans (parallel session):**
-- Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- One code-quality review after each task, tiered to what the task risks
-- Faster iteration (no human-in-loop between tasks)
+Compared with `executing-plans`: same session, a fresh subagent per task, one review per task tiered to what the task risks, no human in the loop between tasks.
 
 ## The Process
 
@@ -59,752 +45,397 @@ digraph process {
 
     subgraph cluster_per_task {
         label="Per Task";
-        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
-        "Implementer subagent asks questions?" [shape=diamond];
-        "Answer questions, provide context" [shape=box];
-        "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [shape=box];
-        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
-        "Code quality reviewer subagent approves?" [shape=diamond];
+        "Dispatch implementer (./implementer-prompt.md)" [shape=box];
+        "Implementer asks questions?" [shape=diamond];
+        "Answer: the property and a failing test" [shape=box];
+        "Implementer: senior-engineer pass, TDD, scoped tests, commit, self-review" [shape=box];
+        "Record the gate line against the SHA" [shape=box];
+        "Dispatch code-quality review (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Start the next independent task's implementer" [shape=box];
+        "Approved?" [shape=diamond];
+        "Fix round (max 3, then the breaker)" [shape=box];
+        "Fix touched logic?" [shape=diamond];
+        "Scoped re-review (./re-review-prompt.md)" [shape=box];
         "Mark task complete in TodoWrite" [shape=box];
     }
 
-    "Read Goals table + plan mode; extract all tasks with full text, assign review tier per task, create TodoWrite" [shape=box];
-    "Discover gates, then RUN them on the base branch (pre-flight)" [shape=box];
-    "Base branch green?" [shape=diamond];
-    "Task zero, or pick a different base (tell your human partner which)" [shape=box];
+    "Read the Goals table; extract every task with full text; assign each a review tier; TodoWrite" [shape=box];
+    "Discover the gates; pre-flight the base; no-op draft PR" [shape=box];
+    "Base green and graded by CI?" [shape=diamond];
+    "Task zero, or a different base (tell your human partner which)" [shape=box];
     "More tasks remain in this PR?" [shape=diamond];
-    "PR boundary: GOAL check, then code + maintainability review" [shape=box];
+    "PR boundary: goal check, merge gate, code + maintainability review" [shape=box];
     "More PRs remain?" [shape=diamond];
-    "Dispatch final code reviewer for whole branch (multi-PR plans; a single-PR plan skips)" [shape=box];
-    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+    "Final whole-branch code review (multi-PR plans only)" [shape=box];
+    "Use swisper-superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read Goals table + plan mode; extract all tasks with full text, assign review tier per task, create TodoWrite" -> "Discover gates, then RUN them on the base branch (pre-flight)";
-    "Discover gates, then RUN them on the base branch (pre-flight)" -> "Base branch green?";
-    "Base branch green?" -> "Task zero, or pick a different base (tell your human partner which)" [label="no"];
-    "Task zero, or pick a different base (tell your human partner which)" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Base branch green?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
-    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
-    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [label="no"];
-    "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Start next task's implementer in parallel (reviewer is a READER)" [label="if next task is independent"];
-    "Start next task's implementer in parallel (reviewer is a READER)" [shape=box];
-    "Fix round (max 3, then the breaker)" [shape=box];
-    "Fix round (max 3, then the breaker)" -> "Fix touched logic?" [label=""];
-    "Fix touched logic?" [shape=diamond];
-    "Fix touched logic?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes - scoped re-review"];
+    "Read the Goals table; extract every task with full text; assign each a review tier; TodoWrite" -> "Discover the gates; pre-flight the base; no-op draft PR";
+    "Discover the gates; pre-flight the base; no-op draft PR" -> "Base green and graded by CI?";
+    "Base green and graded by CI?" -> "Task zero, or a different base (tell your human partner which)" [label="no"];
+    "Task zero, or a different base (tell your human partner which)" -> "Dispatch implementer (./implementer-prompt.md)";
+    "Base green and graded by CI?" -> "Dispatch implementer (./implementer-prompt.md)" [label="yes"];
+    "Dispatch implementer (./implementer-prompt.md)" -> "Implementer asks questions?";
+    "Implementer asks questions?" -> "Answer: the property and a failing test" [label="yes"];
+    "Answer: the property and a failing test" -> "Dispatch implementer (./implementer-prompt.md)";
+    "Implementer asks questions?" -> "Implementer: senior-engineer pass, TDD, scoped tests, commit, self-review" [label="no"];
+    "Implementer: senior-engineer pass, TDD, scoped tests, commit, self-review" -> "Record the gate line against the SHA";
+    "Record the gate line against the SHA" -> "Dispatch code-quality review (./code-quality-reviewer-prompt.md)";
+    "Dispatch code-quality review (./code-quality-reviewer-prompt.md)" -> "Start the next independent task's implementer" [label="if the next task is independent"];
+    "Dispatch code-quality review (./code-quality-reviewer-prompt.md)" -> "Approved?";
+    "Approved?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Approved?" -> "Fix round (max 3, then the breaker)" [label="no"];
+    "Fix round (max 3, then the breaker)" -> "Fix touched logic?";
+    "Fix touched logic?" -> "Scoped re-review (./re-review-prompt.md)" [label="yes"];
     "Fix touched logic?" -> "Mark task complete in TodoWrite" [label="no - close from the diff"];
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
-    "Code quality reviewer subagent approves?" -> "Fix round (max 3, then the breaker)" [label="no"];
-    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Scoped re-review (./re-review-prompt.md)" -> "Approved?";
     "Mark task complete in TodoWrite" -> "More tasks remain in this PR?";
-    "More tasks remain in this PR?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain in this PR?" -> "PR boundary: GOAL check, then code + maintainability review" [label="no"];
-    "PR boundary: GOAL check, then code + maintainability review" -> "More PRs remain?";
-    "More PRs remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes - next sub-branch"];
-    "More PRs remain?" -> "Dispatch final code reviewer for whole branch (multi-PR plans; a single-PR plan skips)" [label="no"];
-    "Dispatch final code reviewer for whole branch (multi-PR plans; a single-PR plan skips)" -> "Use superpowers:finishing-a-development-branch";
+    "More tasks remain in this PR?" -> "Dispatch implementer (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain in this PR?" -> "PR boundary: goal check, merge gate, code + maintainability review" [label="no"];
+    "PR boundary: goal check, merge gate, code + maintainability review" -> "More PRs remain?";
+    "More PRs remain?" -> "Dispatch implementer (./implementer-prompt.md)" [label="yes - next sub-branch"];
+    "More PRs remain?" -> "Final whole-branch code review (multi-PR plans only)" [label="no"];
+    "Final whole-branch code review (multi-PR plans only)" -> "Use swisper-superpowers:finishing-a-development-branch";
 }
 ```
 
-## Discover the project's quality gates BEFORE the first dispatch
+## Before task 1
 
-Do this once per plan, and put the result in every implementer prompt (there is
-a slot for it in `implementer-prompt.md`).
+### Read the plan's Goals table: it is what "done" means
 
-Read the project's linter config, pre-commit hook and CI workflows, and write
-down the gates **concretely**: complexity cap and its tool, lint command and
-whether warnings block, typecheck command, and the exact test command including
-any landmine (Foundry: never bare `npx vitest`).
+A plan from `swisper-superpowers:writing-plans` opens with a **Goals table lifted from spec §0**: per goal, the named **beneficiary**, the **Value** they get, the **Proof** (`UBER-AC-n`), and **First delivered in**.
 
-**Why the controller, not the implementer:** an implementer that discovers a
-gate by failing it has already shaped the change around the wrong constraint,
-and the rewrite costs more than the original. Measured 2026-07-29: a fix hit an
-undisclosed complexity cap twice — once at pre-commit, once in CI — and both
-round trips were avoidable by one sentence in the dispatch.
+- **Put the goal a task serves into that task's dispatch** (one line), so the implementer resolves small ambiguities toward the outcome.
+- **Note which PR first delivers each goal.** That PR owes a goal check at its boundary.
+- **If the plan has no Goals table**, say so, lift the goals from spec §0 yourself, and tell your human partner. Don't execute a plan whose definition of done you cannot state.
 
-⚠ **State the number, never "follow the project's conventions".** A cap the
-implementer has to go looking for is a cap it will discover at commit time.
+An AC passing is not a goal delivered: ACs prove mechanisms, and the goal check at the PR boundary is the one place that measures whether someone can use the result.
 
-⚠ **A linter's exit code is not its verdict — measured 2026-08-13.** The repo's
-biome wrapper exits **0 on warnings** and non-zero only on errors. So `echo $?`
-proves "no errors", never "clean". In one session an implementer that *knew
-this and warned me about it* still recorded "0 errors, 0 warnings" for a run
-that had **2 warnings**, and the change had added one of them. Worse, the added
-warning was `noExcessiveLinesPerFunction`, which the complexity ratchet does not
-count — so the extraction traded a **counted** violation for an **uncounted**
-one and every gate reported an improvement.
-**Put in every dispatch: read `Found N errors` AND `Found N warnings`, and the
-processed file count. Three numbers, not an exit code.**
+### The workspace and the ledger
 
-🔴 **AND TAKE THE NUMBERS FROM A MACHINE REPORTER, NOT THE HUMAN SUMMARY.**
-Measured 2026-08-13, same repo, next day: biome's human output printed
-**`Found 1 warning`** while its JSON reporter for the identical run reported
-**`errors: 2`** — a format error and an `a11y/useKeyWithClickEvents`
-violation. An implementer following the three-numbers rule on the human output
-alone *would have shipped a lint error believing the run was clean*; it caught
-both only because it asked for `--reporter=json`.
+`scripts/sdd-workspace PLAN_FILE` prints the plan's workspace (`.superpowers/sdd/<plan>/`, git-ignored). Keep there the progress ledger, each task's brief (the text you dispatched), each implementer's report (fix reports appended to it), and the review packages `scripts/review-package` writes. Fix rounds and re-reviews read these files.
 
-So the rule is: **`--reporter=json` (or the tool's equivalent) and read the
-counts out of the structured output.** A summary line is a claim the tool makes
-about itself, and this one under-reported errors as warnings.
+### Discover the project's quality gates
 
-⚠ **A count ratchet is not a cap.** Where a project enforces the repo-wide
-violation COUNT (it may only fall), say so explicitly — the implementer needs
-to know it may leave an existing over-cap function alone but must not add to
-it. Otherwise it will either refuse to touch legacy code or try to refactor
-the whole file.
+Do this once per plan and put the result in every implementer prompt (`implementer-prompt.md` has the slot), because an implementer that finds a gate by failing it has already shaped the change around the wrong constraint.
 
-### Then RUN them on the base branch, before task 1 (the pre-flight)
+Read the linter config, pre-commit hook and CI workflows, and write the gates down **concretely**:
+- the complexity cap and its tool, and whether the project runs a **count ratchet** (the repo-wide violation count may only fall: the implementer may leave an existing over-cap function alone but must not add to it);
+- the lint command, and whether warnings block;
+- every typecheck config CI runs (`tsc --noEmit` and `tsc --noEmit -p tsconfig.test.json` are two gates);
+- the exact test command, including any landmine (e.g. "never bare `npx vitest`");
+- the smoke command (see Rule 3).
 
-Reading the gates tells you what they are. **Running them tells you whether the
-branch you are about to build on already passes.** These are different questions
-and only the second one predicts your day.
+**State the number, never "follow the project's conventions".**
 
-Check out the base branch clean and run **every** gate — typecheck (each config,
-not just the default one), lint, the ratchet or coverage floor, the test suite.
-Write the numbers into the ledger as the starting line:
+Lint counts come from the tool's machine reporter (`--reporter=json` or equivalent): errors, warnings and the processed-file count. Put that instruction in every dispatch. An exit code proves only "no errors", and a human summary line can report an error as a warning.
+
+### Pre-flight the base branch
+
+Check out the base branch clean and run its local gates: each typecheck config, lint, the ratchet or coverage floor. The base's suite result comes from CI (the no-op draft PR below). Write the starting line into the ledger:
 
 ```
-Base <branch> @ <sha>: tsc 0 · tsc -p tsconfig.test.json 0 · complexity 239/239 · tests 251 green
+Base <branch> @ <sha>: tsc 0 · tsc -p tsconfig.test.json 0 · complexity 239/239 · CI suite green (run 1234)
 ```
 
-**Why this pays for itself immediately.** Measured 2026-07-29, Foundry: the base
-branch carried 3 complexity violations over the ratchet and a red second
-typecheck config. Neither was discovered by the pre-flight, because there wasn't
-one — the first was found by a merge blocking a commit, the second by an
-implementer minutes into task 1. Fixing them mid-flight meant a refactor of three
-untested functions (27 characterization tests written first) wedged between the
-plan and its first task. **Two minutes of pre-flight would have surfaced both
-before anything was dispatched**, where they are a scoped task instead of an
-interruption.
+A red gate on the base is either **task zero** or a reason to pick a different base. Decide which before task 1, in the open, and tell your human partner.
 
-A red gate on the base branch is not a nuisance to route around. It is either
-**task zero** or a reason to pick a different base — decide that deliberately,
-in the open, before task 1, and tell your human partner which you chose.
+### Confirm CI grades the integration branch: one no-op draft PR
 
-⚠ **Run every typecheck config the CI runs.** A project with `tsc --noEmit` and
-`tsc --noEmit -p tsconfig.test.json` has two gates; checking one and reporting
-"typecheck green" is a false claim, and it is the easiest one to make by
-accident.
+Before task 1, open one no-op draft PR into the integration branch: a comment-only change in a path your tasks will touch, so `paths:` filters see it. Confirm the workflows run for PRs into that branch (their `branches:` and `paths:` filters) and come back green, then close it. Not graded, or red, is task zero, like a red local gate.
 
-### And confirm CI GRADES the integration branch — one no-op draft PR
+### Branch overlay (multi-PR plans in a Prism-indexed repo)
 
-🔴 **Before task 1, open one no-op draft PR into the integration branch** — a
-comment-only change in a path your tasks will touch, so `paths:` filters see it.
-Confirm the workflows actually run for PRs into that branch (their `branches:` and
-`paths:` filters) and come back green, then close it. Not graded, or red, is task
-zero — the same rule as a red local gate.
-*Measured 2026-10-05 (helvetiq model layer): three CI round trips came from the
-base, not our code — PRs into `feature/model-layer` were not graded at all (the
-workflow branch filter), a release-version gate blocked every PR after a release,
-and a test-count floor tripped.*
-
-## One working tree, one mutating agent
-
-**Readers may share a checkout. Mutators may not.** A reviewer running alongside
-an implementer is fine. Two agents that both *write* to the tree — two
-implementers, or an implementer and a code-quality reviewer running its own
-mutation harness — cannot both produce trustworthy measurements.
-
-Mutation testing is the discipline this skill asks for, and it is exactly what
-makes concurrency unsafe: a mutation check deliberately breaks a file, runs the
-suite, and restores it. Two of those interleaved in one checkout give each other
-a broken file at the moment they measure.
-
-**The failure mode is not a merge conflict. Nothing errors.**
-- Your gate run measures the *other* agent's deliberately-broken file and reports
-  it as your green. A "tests pass" claimed in that window is a false claim made in
-  good faith — the claim-vs-measurement failure with no visible tell.
-- A `git add -A` at the wrong instant commits their broken code under your message.
-- Contention also produces phantom red, which trains everyone to ignore red.
-
-**Measured 2026-07-29, Foundry:** two implementers shared one worktree. One
-watched the shared file change under it three times in ~90 seconds — an `isNull`
-predicate swapped for the `= NULL` bug its AC existed to prevent, a `DELETE`
-injected before an append-only insert, an ordering tiebreak dropped. All were the
-other agent's mutations, correctly restored, and all were live in the first
-agent's `git diff`. One agent's uncommitted fix was swept into the other's commit;
-six unrelated tests went red and vanished on a quiet re-run.
-
-**How to comply: give each mutating task its own `git worktree`** (symlink
-`node_modules`).
-
-🔴 **Do NOT serialise independent tasks. Ruled by Heiko, 2026-08-13: "never do this."**
-Earlier wording offered serialising as an equal alternative, and it is not — it is the expensive
-one. A worktree costs seconds to create; queueing an independent task behind another agent's
-review costs its whole duration, and a plan of five independent tasks run in sequence costs the
-sum of five instead of the longest one.
-
-**Independence is read off the plan, not guessed:** the depends-on column and the per-PR file
-lists already say which tasks share files. Tasks that touch disjoint files run **at the same
-time, in separate worktrees**. Serialise only what genuinely shares a file or consumes another
-task's contract.
-
-*(Measured 2026-08-13: a five-task PR ran almost entirely in sequence because the one-mutator
-rule was read as "queue them". Two of those tasks touched entirely disjoint directories and could
-have run together from the first minute.)*
-
-🔴 **Helpers stay inside their own worktree and scratch space.** Every implementer and
-reviewer dispatch carries the sandbox rules in `implementer-prompt.md` and the
-reviewer template: own worktree and own scratch subdirectory only; never install into
-or write through shared tool installs (a uv-managed Python, shared venvs, global
-caches); never delete files they did not create; never print environment variables.
-*Measured 2026-10-05: a helper overwrote the machine's shared uv Python 3.12 and every
-venv needed repair; a helper deleted another agent's screenshots in the shared
-scratchpad; a reviewer printed env tokens into its transcript.*
-
-If you inherit contention: back the work up
-outside the tree, wait for zero test processes **and** a clean target file, stage
-by explicit path — never `git add -A` — and re-verify restoration after every
-mutation. Then **verify the shared file at HEAD by grepping for the specific
-mutation shapes** before trusting any gate output from that window. Do not assume
-they were restored.
-
-## Match the review to the task (proportionality)
-
-**The per-task spec-compliance review is CUT.** One code-quality review per task
-is the default. Scale the rest to what the task actually risks, and decide the
-tier when you extract the task — not after the implementer reports.
-
-| Task shape | Per-task review |
-|---|---|
-| **Declarative / mechanical** — a schema table, a config entry, a generated migration, a mechanical rename. Little to interpret; the diff is checkable by reading. | One code-quality review. |
-| **Logic / contract** — branches, thresholds, ordering, a public contract others consume, or a rule the spec argues about. | One code-quality review. The implementer **positive-controls its gates** and mutates **the one property the task exists to protect** — one or two, never a sweep. **The REVIEWER runs the sweep** (see below). |
-| **User-visible surface** | One code-quality review **plus the render gate** against the scaffold. Never reduce this one. |
-
-### Who mutates — the author is the wrong person, and it is measurable
-
-🔴 **An implementer mutating its own fresh code picks the mutations it already thought
-of — which is the same set it wrote tests for.** It is self-review wearing a lab coat,
-and it costs a full edit/run/revert/verify cycle per mutant.
-
-**Measured 2026-08-24, Foundry asset-drawer PR-1** — seven tasks, one PR:
-
-| who mutated | mutations | holes found |
-|---|---|---|
-| **implementers**, on code they had just written | **~45** | **0** |
-| **a reviewer**, on someone else's code | **2** | **1** |
-
-The one hole was real and would have been counted as coverage: a re-review deleted a
-`both-null → 0` branch and swept fixture sizes 3–24 — **the mutant survived at every
-size**, because an earlier guard already produced the same observed order. The test
-traced to nothing. A different mind chose that mutation; the author never would have.
-
-Note that the paragraph below already argues this — the "four surviving mutations in
-an already-green suite" it credits were found by the **code-quality review**. The
-evidence was always reviewer-side; the mandate had drifted to the author.
-
-**So, three things get called "mutation testing" and only one is expensive:**
-
-1. **Positive-control a gate** — break what it checks, watch it go red, restore. One or
-   two, seconds each. **Always, at every tier.** This is *a claim is not a measurement*
-   applied, and it catches the gate that cannot fail. *(Same run: a token scanner caught
-   a false positive of its own — a URL path segment `/h-20` — only because it was
-   controlled.)*
-2. **Prove a CARRIED or RETARGETED test still guards.** When a test is moved onto a new
-   component, break the behaviour it guards and watch it redden **against the new
-   target**. Non-negotiable: a carried test that cannot fail is theatre, and proving it
-   can is the entire justification for carrying it rather than deleting it.
-3. **A sweep of N mutants over fresh code** — the expensive one, and the one with the
-   0-for-45 return. **This belongs to the reviewer, not the author**, and only at
-   logic/contract tier. **A survivor is reported as "strengthen `<existing test>` so this
-   mutant dies"** — never "add a test". See "Tests: the plan's list" below.
-
-**If quality drops after this change, put the sweep back and say so** — this is a trade
-made on one PR's evidence, not a law.
-
-**Why the spec review went, and where spec fidelity actually lives now.** Measured
-2026-07-29, Foundry: across a whole PR the **code-quality** reviews found nearly
-everything of consequence — a type narrowing that would have forced casts through
-two later tasks, four surviving mutations in an already-green suite, a suggested
-test that would have passed while proving nothing. The **spec** reviews came back
-compliant or near-compliant *every single time*. A 52-line Drizzle table
-declaration went through implementer + spec review + code-quality review + fix
-round + scoped re-review — five subagents to confirm a table matched its spec.
-
-Spec fidelity is now proved by three things that were already binding and already
-paid for:
-
-1. **AC-named tests** — every AC has a test carrying its ID verbatim, asserted at
-   promise altitude. A missing or mis-levelled AC test is a code-quality finding.
-2. **The PR-boundary code review**, which checks plan/spec alignment and AC
-   coverage across the whole PR — where cross-task drift actually shows up.
-3. **The goal check**, which asks the only question a spec review never did:
-   can the beneficiary use it?
-
-A per-task spec review was a fourth measurement of the same property, taken at the
-altitude where drift is least visible.
-
-⚠ **This is not a licence to touch the boundary.** Per-task review prevents drift
-inside a task; the boundary catches what only appears across tasks. Cutting
-per-task ceremony makes the boundary review **more** load-bearing, not less.
-
-## Tests: the plan's list, strengthened before added, deleted when covered
-
-🔴 **The review loop is where a suite inflates.** Every finding and every surviving
-mutant used to be answered with a new test, and deletion was never a step.
-*Measured 2026-10-05, Foundry main: ~21,500 test cases, ~18% naming an AC; in a
-pressure run on the old prompts, three review findings on one route were answered
-with **8 new unit tests, 0 strengthened, 0 deleted** — and a reviewer facing 13
-untraced tests asked for 4 deletions and **2 more**.* The rules are
-`test-driven-development` R1–R8; this is where the controller enforces them.
-
-- **The dispatch carries the plan's named test list** — one per AC, plus the listed
-  invariants and failure modes (`implementer-prompt.md` has the slot). A test beyond
-  the list is allowed only with its AC/INV/FM id named in the commit and the report.
-- **Fix rounds strengthen first.** Send a finding or a survivor as *"make `<test>`
-  fail on this"*. A new test only when no existing test sits at the right altitude,
-  and it carries an id.
-- **The reviewer treats untraced or mechanism-only tests as Important findings** —
-  disposition *strengthen* or *delete*, never "keep for coverage". It never requests
-  a test without naming the id it proves.
-- **Every report and ledger line counts tests added, strengthened and deleted**, from
-  `trace-check.sh` (in `test-driven-development`), not from memory. **At the PR
-  boundary, net growth is explained** — which promises the new tests prove, and which
-  lower tests a new higher one made redundant and were deleted.
-
-## Senior-engineer pass — before the first line of code
-
-Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Right
-before its first test, every implementer reasons in a ≤12-line note (template and list of
-junior anti-patterns in `implementer-prompt.md`): **J** — what a junior would most likely
-do in THIS task; **S** — the senior design instead: existing pieces reused
-(`path::symbol`), failure modes, limits, compatibility, observability, and what it will
-NOT build; **I** — the invariants it protects and the test proving each.
-
-- **It is a reasoning step, not a gate.** Nobody approves it, nothing waits on it, no
-  extra dispatch. The note goes in the implementer's report; the code-quality reviewer
-  may read it as context.
-- **The dispatch carries the spec's §1 `seam`, `mechanism` and `senior` lines**, so the
-  pass starts from the designer's answer instead of re-deriving it.
-
-## When to run what — the gate ladder
-
-Most of the elapsed time in a plan is not thinking. It is the same suite run by
-three agents on the same unchanged code. Four rules remove that without weakening
-a single binding check.
-
-### Rule 1 — a gate result belongs to a SHA, not to an agent
-
-🔴 **Never re-run a gate on a SHA that already has a result.** The implementer
-runs its gates and reports the command **and its output**; you record it in the
-ledger against the commit:
-
-```
-Task 4 @ a7c31f9: tsc 0 · lint 0 · touched-suite 43 green · tests +2 ~1 −3 · trace-check PASS
-```
-
-The reviewer reads that line. It does not re-run the suite — it is reviewing a
-diff, not re-measuring the code. The **PR boundary re-runs everything once**, and
-that run is the binding one.
-
-This is not trust replacing measurement. The boundary run is unconditional, and it
-is what "green" means. What it removes is re-measuring unchanged code to produce a
-result you already have. If the boundary run ever disagrees with a recorded
-per-task line, that is a finding **about the implementer** — treat it as seriously
-as a code defect, because a fabricated gate result poisons every decision after it.
-
-### Rule 2 — cheapest gate first, and stop at the first red
-
-Order by seconds-to-signal, not by importance: **typecheck → lint the diff → the
-named test → the touched test files → the full suite.** A typecheck failure found
-in 4 seconds costs nothing; the same failure found after a 6-minute suite costs
-6 minutes, every time it happens.
-
-### Rule 3 — 🔴 THE FULL SUITE IS CI'S JOB. NOBODY RUNS IT LOCALLY.
-
-| When | What runs | Typical cost |
-|---|---|---|
-| TDD inner loop (every RED → GREEN) | the **single named test** | seconds — this is the loop you run twenty times |
-| Task reported DONE | typecheck · lint the diff · **the test files this task touched** · and **at most** the project's SMOKE set | tens of seconds |
-| **PR boundary** | typecheck · lint · ratchet — then **push and let CI run the suite** | CI's minutes, not yours |
-| **Never, by anyone, for any reason** | the full suite on a developer machine | see below |
-
-**The implementer's ceiling is: the tests it wrote, plus the smoke set. That is enough to
-merge**, because CI re-runs everything before anything lands. An implementer running the whole
-suite is buying a result CI is about to produce anyway, on worse hardware, while other agents
-are working.
-
-🔴 **Name the smoke command in the dispatch — and read the runner script before you name it.**
-Measured 2026-08-13, Foundry: the tier called `gate`, which `npm test` runs, is *the whole suite
-minus a handful of `.extended` files* — ~890 files. The real smoke set was a different tier,
-`test:core`, a curated manifest of **21**. A dispatch saying "run the smoke tests" would have
-bought nearly nothing. **Do not trust the name.**
-
-**Why a local full-suite run is worse than useless — measured, one session, one repo:**
-- Two suites in one checkout fight over the same worker databases. One run produced **184
-  failures — every one a hook timeout or deadlock, zero assertion failures**, all passing in
-  isolation. Hours of diagnosing an artefact of your own parallelism.
-- A contended run took **2,069s** against a normal ~200s, blew past the harness timeout and was
-  killed with nothing to show. A third attempt was killed by memory pressure.
-- **CI ran the same suite clean in 5m56s** while all of that was happening.
-
-**If a distant break matters, push — do not run it locally.** CI is the per-branch environment:
-clean machine, fresh database, full set, nothing to tear down. Gate the merge on it.
-
-⚠ **Never report a suite result you did not see.** Three failed local attempts are three
-non-measurements, and "tests pass" from any of them is exactly the false green this skill exists
-to prevent.
-
-### Rule 4 — reviews are READERS: pipeline them with the next implementer
-
-A code-quality review mutates nothing. The one-mutator rule permits **one mutator
-plus any number of readers** in a tree. So:
-
-- Dispatch task N's review and **immediately start task N+1's implementer**, when
-  the plan's depends-on column says N+1 does not consume N's artifact.
-- **Fix rounds for N wait** until N+1's implementer finishes — a fix is a mutator,
-  and two mutators in one tree is the silent-false-green failure above.
-- Never pipeline across a contract boundary: if N produces a contract N+1 consumes,
-  N's review completes first.
-
-Review latency leaves the critical path entirely. This is the single largest
-wall-clock saving available, and it costs nothing in rigour because the reviewer
-is looking at a frozen diff either way.
-
-## Screens: the scaffold is the basis, always
-
-If any task renders a user-visible surface, an approved **mock scaffold** is the binding implementation spec (RULE 0 — an approved mock IS the real React scaffold, not HTML that looks like it). The implementer prompt carries this, but the controller owns it:
-
-- **Name the scaffold in the dispatch.** Do not rely on the implementer finding it. If the plan does not name one for a UI task, that is a **plan gap** — fix the plan before dispatching, rather than letting an implementer invent a screen.
-- **A vague spec is never a licence to design.** An implementer reporting "the spec was unclear about the screen" gets the scaffold path, not a free hand.
-- **Render-gate at the PR boundary — mechanically.** `render-gate.mjs` (in the
-  `creating-screen-mocks` skill) joins build to mock on `data-testid` and exits 1
-  on any difference; the implementer runs it before reporting DONE. Then the real
-  screen beside the scaffold for what a fingerprint cannot see. A difference is a bug in the build *or* a change the scaffold needs — the second is an upstream finding, not something to diverge over quietly.
-
-## Branch overlay for multi-PR plans (do this first, if the repo is Prism-indexed)
-
-Before dispatching any subagent, count the PRs in the plan's decomposition. A single-PR
-plan has no decomposition and is single-PR by definition — skip this section. If there is
-**more than one PR**, the feature branch is long-lived — register a Prism branch overlay
-ONCE on the feature branch so every subagent's `prism search` / `find-refs` / `prepare-edit`
-reflects branch-only changes, not just the default-branch index plus each subagent's own
-local dirty files (subagents have isolated working trees; without the overlay one subagent
-can't see another's merged-to-feature work):
+A single-PR plan, or a repo without Prism, skips this. With more than one PR the feature branch is long-lived, so register a Prism branch overlay once, on the feature branch, before any dispatch. Every subagent's `prism search` / `find-refs` / `prepare-edit` then sees branch-only changes, including other subagents' work merged into the feature branch:
 
 ```bash
 prism branch create <feature-branch>   # one-time, while the feature branch is checked out
 prism branch wait <feature-branch>      # block until the overlay is `active`
 ```
 
-The CLI auto-resolves this overlay for every subagent read (sub-branches resolve to it via
-ancestry walk) — no per-subagent config. Delete it once the feature merges or is abandoned:
-`prism branch delete <feature-branch>`. Single-PR plans skip this. (Tool exists on both CLI
-`prism branch create` and MCP `create_branch_index`; use the CLI — it's a lifecycle op.
-Non-Prism repos: skip.)
+Sub-branches resolve to it automatically; no per-subagent config. Use the CLI (it is a lifecycle operation). Delete it once the feature merges or is abandoned: `prism branch delete <feature-branch>`.
+
+## One working tree, one mutating agent
+
+**Readers may share a checkout. Mutators may not.** A mutator is anything that writes to the tree: an implementer, a fix round, a reviewer running mutations. Two mutators in one tree produce silent false greens, not merge conflicts: a gate run measures the other agent's deliberately broken file and reports it as your green, and a `git add -A` at the wrong instant commits their code under your message.
+
+- **Give each mutating task its own `git worktree`** (symlink `node_modules`).
+- **Don't serialise independent tasks**, because a worktree costs seconds and a queued task costs its whole duration. Read independence off the plan (the depends-on column and the per-PR file lists): tasks on disjoint files run at the same time, in separate worktrees. Serialise only what shares a file or consumes another task's contract.
+- **Helpers stay inside their own worktree** and scratch space. Every implementer and reviewer dispatch carries the sandbox rules (`implementer-prompt.md`, `requesting-code-review/code-reviewer.md`): own worktree and own scratch subdirectory only; never install into or write through shared tool installs (a uv-managed Python, shared venvs, global caches); never delete files they did not create; never print environment variables.
+
+If you inherit contention: back the work up outside the tree; wait for zero test processes and a clean target file; stage by explicit path, never `git add -A`; re-verify restoration after every mutation; and grep the shared file at HEAD for the specific mutation shapes before trusting any gate output from that window.
+
+## Match the review to the task (proportionality)
+
+One code-quality review per task is the default; there is no per-task spec review. Decide the tier when you extract the task, not after the implementer reports.
+
+| Task shape | Per-task review |
+|---|---|
+| **Declarative / mechanical**: a schema table, a config entry, a generated migration, a mechanical rename. The diff is checkable by reading. | One code-quality review. |
+| **Logic / contract**: branches, thresholds, ordering, a public contract others consume, or a rule the spec argues about. | One code-quality review. The implementer positive-controls its gates and mutates **the one property the task exists to protect** (one or two mutations, not a sweep). **The reviewer runs the sweep** (below). |
+| **User-visible surface** | One code-quality review **plus the render gate** against the scaffold. Never reduce this one. |
+
+### Who mutates
+
+Three things get called "mutation testing":
+
+1. **Positive-control a gate**: break what it checks, watch it go red, restore. One or two, seconds each, at every tier. It catches the gate that cannot fail.
+2. **Prove a carried or retargeted test still guards**: when a test moves onto a new component, break the behaviour it guards and watch it redden against the new target. A carried test that cannot fail is not worth carrying.
+3. **A sweep of N mutants over fresh code**: the reviewer's job, at logic/contract tier only, because an author mutating its own code picks the mutations it already wrote tests for. The reviewer runs it in its own worktree checked out at the task's HEAD, so it stays a reader of the implementer's tree. A survivor is reported as "strengthen `<existing test>` so this mutant dies", never "add a test".
+
+If quality drops after this split, put the sweep back on the implementer and say so.
+
+**Where spec fidelity is proved:** by AC-named tests asserted at promise altitude (a missing or mis-levelled AC test is a code-quality finding), by the PR-boundary review (plan/spec alignment and AC coverage across the PR, where cross-task drift shows), and by the goal check. With no per-task spec review the boundary review carries more weight, so never thin it.
+
+## Tests: the plan's list, strengthened before added, deleted when covered
+
+Review loops are where a suite inflates: each finding and surviving mutant answered with a new test, and nothing deleted. The rules are `test-driven-development` R1–R8; this is where the controller enforces them.
+
+- **The dispatch carries the plan's named test list**: one per AC, plus the listed invariants and failure modes (`implementer-prompt.md` has the slot). A test beyond the list is allowed only with its AC/INV/FM id named in the commit and the report.
+- **Fix rounds strengthen first.** Send a finding or a survivor as *"make `<test>` fail on this"*. A new test only when no existing test sits at the right altitude, and it carries an id.
+- **The reviewer treats untraced or mechanism-only tests as Important findings**, disposition *strengthen* or *delete*, never "keep for coverage". It never requests a test without naming the id it proves.
+- **Every report and ledger line counts tests added, strengthened and deleted**, from `trace-check.sh` (in `test-driven-development`), not from memory. At the PR boundary, net growth is explained: which promises the new tests prove, and which lower tests a new higher one made redundant and were deleted.
+
+## Senior-engineer pass: before the first line of code
+
+Right before its first test, every implementer reasons in a ≤12-line note (template and the list of junior anti-patterns are in `implementer-prompt.md`): **J**, what a junior would most likely do in THIS task; **S**, the senior design instead: existing pieces reused (`path::symbol`), failure modes, limits, compatibility, observability, and what it will NOT build; **I**, the invariants it protects and the test proving each.
+
+- **It is a reasoning step, not a gate.** Nobody approves it, nothing waits on it, no extra dispatch. The note goes in the implementer's report; the code-quality reviewer may read it as context.
+- **The dispatch carries the spec's §1 `seam`, `mechanism` and `senior` lines**, so the pass starts from the designer's answer instead of re-deriving it.
+
+## When to run what: the gate ladder
+
+Most elapsed time in a plan is the same suite run by several agents on unchanged code. Four rules remove that without dropping a binding check.
+
+### Rule 1: a gate result belongs to a SHA, not to an agent
+
+Don't re-run a gate on a SHA that already has a result. The implementer runs its gates and reports the command **and its output**; you record it in the ledger against the commit:
+
+```
+Task 4 @ a7c31f9: tsc 0 · lint 0 · touched-suite 43 green · tests +2 ~1 −3 · trace-check PASS
+```
+
+The reviewer reads that line instead of re-running the suite. At the PR boundary you run the local gates once and CI runs the full suite; **CI's run on the head SHA is the binding result.** If it disagrees with a recorded per-task line, that is a finding about the implementer, as serious as a code defect, because every later decision rested on that line.
+
+### Rule 2: cheapest gate first, and stop at the first red
+
+Order by seconds-to-signal: **typecheck → lint the diff → the named test → the touched test files → push, and CI runs the full suite.**
+
+### Rule 3: the full suite is CI's job
+
+| When | What runs |
+|---|---|
+| TDD inner loop (every RED → GREEN) | the **single named test**: seconds, run twenty times |
+| Task reported DONE | typecheck · lint the diff · **the test files this task touched** · at most the project's smoke set |
+| PR boundary | typecheck · lint · ratchet locally, then **push; CI runs the full suite** |
+
+By default nobody runs the full suite locally: CI runs it on a clean machine before anything lands, and a local run on a shared machine fights other agents' suites for worker databases and produces timeouts that look like failures. **Exception:** when CI cannot run the suite for this branch, name a local full run in the dispatch and write why in the ledger; one suite per checkout at a time.
+
+The implementer's ceiling is the tests it wrote plus the smoke set, and that is enough to merge, because CI re-runs everything. **Name the smoke command in the dispatch, and read the runner script before you name it**: a tier called `gate` or `test` is often the whole suite under a reassuring name. If the project has no smoke set, say so.
+
+If a distant break matters, push and let CI answer it; gate the merge on CI. Never report a suite result you did not see.
+
+### Rule 4: reviews are readers, so pipeline them with the next implementer
+
+- Dispatch task N's review and **immediately start task N+1's implementer**, when the plan's depends-on column says N+1 does not consume N's artifact.
+- A fix round is a mutator. If N and N+1 share a tree, N's fix round waits until N+1's implementer finishes; in separate worktrees it runs at once.
+- Never pipeline across a contract boundary: if N produces a contract N+1 consumes, N's review completes first.
+
+Review latency leaves the critical path, at no cost in rigour: the reviewer reads a frozen diff either way.
+
+## Screens: the scaffold is the basis, always
+
+If any task renders a user-visible surface, an approved **mock scaffold** is the binding implementation spec (RULE 0: an approved mock is the real React scaffold, not HTML that looks like it). The implementer prompt carries this, but the controller owns it:
+
+- **Name the scaffold in the dispatch.** If the plan names none for a UI task, that is a plan gap: fix the plan before dispatching, rather than letting an implementer invent a screen.
+- **A vague spec is never a licence to design.** An implementer reporting "the spec was unclear about the screen" gets the scaffold path, not a free hand.
+- **Render-gate mechanically.** `render-gate.mjs` (in the `creating-screen-mocks` skill) joins build to mock on `data-testid` and exits 1 on any difference; the implementer runs it before reporting DONE, and you check it again at the PR boundary. Then look at the real screen beside the scaffold for what a fingerprint cannot see. A difference is a bug in the build *or* a change the scaffold needs; the second is an upstream finding, not a quiet divergence.
 
 ## Model Selection
 
-Use the least powerful model that can handle each role to conserve cost and increase speed.
+Use the least powerful model that can handle each role, to save cost and time.
 
-**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
-
-**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
-
-**Architecture, design, and review tasks**: use the most capable available model.
-
-**Task complexity signals:**
-- Touches 1-2 files with a complete spec → cheap model
-- Touches multiple files with integration concerns → standard model
-- Requires design judgment or broad codebase understanding → most capable model
+- **Mechanical implementation** (isolated functions, clear spec, 1–2 files): a fast, cheap model. Most tasks are mechanical when the plan is well specified.
+- **Integration and judgment** (multi-file coordination, pattern matching, debugging): a standard model.
+- **Architecture, design, review, or anything needing broad codebase understanding**: the most capable model available.
 
 ## Handling Implementer Status
 
-Implementer subagents report one of four statuses. Handle each appropriately:
+- **DONE:** record the gate line against the SHA, then dispatch the code-quality review.
+- **DONE_WITH_CONCERNS:** read the concerns first. Correctness or scope concerns are addressed before review; observations ("this file is getting large") are noted, then review.
+- **NEEDS_CONTEXT:** provide the missing context and re-dispatch.
+- **BLOCKED:** a context problem → more context, same model; needs more reasoning → a more capable model; too large → split the task; the plan is wrong → escalate to the human.
 
-**DONE:** Record the gate line against the SHA, then proceed to the code-quality review.
+Never ignore an escalation or make the same model retry without a change.
 
-**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
+## The fix loop: bounded, with a breaker
 
-**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
+Two routes leave the loop immediately:
 
-**BLOCKED:** The implementer cannot complete the task. Assess the blocker:
-1. If it's a context problem, provide more context and re-dispatch with the same model
-2. If the task requires more reasoning, re-dispatch with a more capable model
-3. If the task is too large, break it into smaller pieces
-4. If the plan itself is wrong, escalate to the human
-
-**Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
-
-## The fix loop — bounded, with a breaker (adopted from upstream 6.2.0)
-
-A review that finds problems starts a fix loop, and **a fix loop with no cap does not terminate** — the same failure the spec/plan reviews had before `review-termination.md`. Two routes leave the loop immediately:
-
-- **Minor findings never enter it.** Record them in the progress ledger as you go (`Task <N>: minor (deferred): <one-liner>`) and point the final whole-branch review at that list. A roll-up nobody reads is a silent discard.
-- **A plan-mandated finding is the human's call.** If a finding conflicts with what the plan requires, present the finding *and* the plan text and ask which governs. Do not dismiss the finding because the plan mandates it, and do not dispatch a fix that contradicts the plan without asking. *(This is the spec-defect route: a plan-time discovery that the SPEC is wrong is a spec bug — take it upstream, don't patch it downstream.)*
+- **Minor findings never enter it.** Record them in the ledger as you go (`Task <N>: minor (deferred): <one-liner>`) and point the final whole-branch review at that list.
+- **A plan-mandated finding is the human's call.** If a finding conflicts with what the plan requires, present the finding *and* the plan text and ask which governs. Don't dismiss the finding because the plan mandates it, and don't dispatch a fix that contradicts the plan without asking. A discovery that the spec is wrong is a spec bug: take it upstream.
 
 Everything else enters. One round = one fix dispatch + at most one scoped re-review. **Three rounds maximum per task.**
 
-- **Rounds 1–2 — resume the original implementer.** Send the open findings verbatim, plus one line: *"Fix a test gap by strengthening the test that claims the behaviour; a new test only if none sits at the right altitude, with its id; report tests +a ~s −d."* Its context is intact. If your harness cannot message a live subagent, dispatch a fresh one carrying the brief path, the report-file path and the findings — the report file is the persistent memory either way.
-- **Round 3 — fresh implementer on a more capable model**, framed: *"A prior implementer attempted this task twice; you own it now. Read the report file for what was tried."* A loop surviving two resumes means the implementer cannot see its own problem — fresh eyes plus a capability bump in one move.
-- **Every round:** the implementer fixes, re-runs **the tests covering the amended code** (not the full suite — see the gate ladder), appends its fix report to the same report file, and returns the short contract. Confirm the report carries the covering tests, the command run, **and its output** — all three, or it is a claim rather than a measurement.
+- **Rounds 1–2: resume the original implementer.** Send the open findings verbatim, plus one line: *"Fix a test gap by strengthening the test that claims the behaviour; a new test only if none sits at the right altitude, with its id; report tests +a ~s −d."* If your harness cannot message a live subagent, dispatch a fresh one with the brief path, the report-file path and the findings; the report file is the memory either way.
+- **Round 3: a fresh implementer on a more capable model**, framed: *"A prior implementer attempted this task twice; you own it now. Read the report file for what was tried."*
+- **Every round:** the implementer fixes, re-runs **the tests covering the amended code** (Rule 3), appends its fix report to the report file, and returns the short contract. Confirm the report carries the covering tests, the command **and its output**.
 - **After each round**, append: `Task <N>: fix round <R>/3 (<X> addressed, <Y> open — <one-liners>; commits <a7>..<b7>)`.
-
-**The cap came down from five.** Rounds 4–5 were already "fresh implementer on a
-better model" — an escalation wearing a fix round's clothes. Naming it as such
-saves two dispatch pairs per stuck task, and stuck tasks are where the schedule
-actually goes.
 
 ### Not every fix earns a re-review dispatch
 
-A scoped re-review is a subagent. Spending one to confirm a renamed constant is
-the same mis-ratio as the spec review was.
+- **Fix touched logic, control flow, a contract, or a test's assertions** → dispatch the scoped re-review ([`re-review-prompt.md`](re-review-prompt.md)).
+- **Fix was textual** (a rename, an extracted constant, a comment, an import reorder, a type annotation with no narrowing change) → verify it yourself from the diff and the covering-test output, and close it in the ledger.
+- **Unsure which** → dispatch.
 
-- **Fix touched logic, control flow, a contract, or a test's assertions** →
-  dispatch the scoped re-review. [`re-review-prompt.md`](re-review-prompt.md).
-- **Fix was textual** — a rename, an extracted constant, a comment, an import
-  reorder, a type annotation with no narrowing change → **verify it yourself from
-  the diff and the covering-test output, and close it in the ledger.** You are
-  reading three lines; a subagent would read the same three lines.
-- **Unsure which** → dispatch. The doubt is the signal.
+The re-review is **scoped**: it verdicts each finding ADDRESSED / NOT ADDRESSED and flags new breakage **in the fix diff only**. New Critical/Important breakage joins the open list; out-of-scope observations become deferred minors and never extend the loop.
 
-**The re-review, when dispatched, is SCOPED** — verdict each finding ADDRESSED /
-NOT ADDRESSED and flag new breakage **in the fix diff only**. New Critical/Important
-breakage joins the open list; out-of-scope observations become deferred minors and
-never extend the loop.
-
-**Never fix findings yourself in the controller session** — your context stays clean for coordination, and controller fixes skip review entirely.
+**Don't fix findings yourself in the controller session**, because your context stays clean for coordination and a controller fix skips review. The exception is a one-line textual fix (a typo, a single rename): make it and note it in the ledger (`Task <N>: controller fix — <what> @ <sha>`).
 
 ### Rule on the property, not the mechanism
 
-🔴 **In a fix round, and when answering an implementer's question, state what must be
-true and add or name a test that fails today; the implementer chooses how.** If you
-must name a mechanism, probe it first — ≤5 minutes, a scratch script or a failing test.
-*Measured 2026-10-05: three of the lead's mechanism rulings were wrong, each a fix round
-plus a re-review — a stream drain placed inside the deadline turned finished answers
-into failures; a fence scan "first `{` or `[`" returned the wrong span; "strip `top_k`
-from all rows" was too broad, because one wire sends it.*
+In a fix round, and when answering an implementer's question, **state what must be true and add or name a test that fails today; the implementer chooses how.** If you must name a mechanism, probe it first (≤5 minutes, a scratch script or a failing test), because an unprobed mechanism ruling that turns out wrong costs a fix round plus a re-review.
 
 ### The breaker
 
-When round 3's re-review still leaves findings open, **stop dispatching** and adjudicate each one yourself — you hold the plan and the cross-task context the reviewer lacks:
+When round 3's re-review still leaves findings open, **stop dispatching** and adjudicate each one yourself; you hold the plan and the cross-task context the reviewer lacks:
 
 - **Reviewer is wrong, or the point is contestable** → park it: `Task <N>: parked — <finding> — ruling: <why the code stands>`.
 - **Real, but nothing downstream builds on it** → park it the same way, ruling that it is real and deferred.
-- **Real and load-bearing** (a later task builds on it, or it reveals a plan defect) → **STOP.** Append `Task <N>: BLOCKED — <reason>` and report to your human partner with the finding, the plan text it collides with, and the fix history. Parking a structural failure lets every dependent task build on it.
+- **Real and load-bearing** (a later task builds on it, or it reveals a plan defect) → **stop.** Append `Task <N>: BLOCKED — <reason>` and report to your human partner with the finding, the plan text it collides with, and the fix history.
 
-**Adjudicate only at the cap.** Adjudicating earlier to end a loop is pre-judging with a different name. Every adjudication is a ledger entry — a silent discard is forbidden.
+Adjudicate only at the cap; adjudicating earlier to end a loop is pre-judging. Every adjudication is a ledger entry.
 
 ## Prompt Templates
 
-- `./implementer-prompt.md` - Dispatch implementer subagent
-- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent (the only per-task review)
-- `./re-review-prompt.md` - Scoped re-review after a fix round that touched logic (NOT a fresh full review, and not for textual fixes)
+- `./implementer-prompt.md`: dispatch an implementer
+- `./code-quality-reviewer-prompt.md`: the per-task code-quality review
+- `./re-review-prompt.md`: the scoped re-review after a fix round that touched logic
 
-*(`spec-reviewer-prompt.md` was deleted with the per-task spec review. Spec fidelity is proved by AC-named tests, the PR-boundary code review and the goal check — see "Match the review to the task".)*
+## Per-PR boundary
 
-## Read the plan's Goals table FIRST — it is what "done" means
+A Standard or Programme plan has a **PR decomposition table** (sub-branch, scope, ACs verified, contracts produced/consumed, frontend-touched flag) and a **per-PR merge gate**.
 
-A plan produced under the current `superpowers:writing-plans` opens with a **Goals
-table lifted from spec §0**: per goal, the named **beneficiary**, the **Value**
-they get, the **Proof** (`UBER-AC-n`), and **First delivered in**.
+**A Sketch-class plan has neither, by design**: a Sketch spec is one PR. Don't report the absent table as a plan gap and don't invent one. Run the per-task loop, then the boundary review below once, treating the whole branch as the single PR. If a plan is written as one PR but the work is visibly multi-PR, that is a plan defect: take it back to the plan.
 
-Read it before extracting a single task, and carry it forward:
+For a multi-PR plan, organise the per-task loop by PR:
 
-- **Put the goal a task serves into that task's dispatch.** An implementer that
-  knows who benefits and how makes better calls at every ambiguity than one
-  holding only a task body. It costs one line.
-- **Note which PR is the first delivery of each goal.** That PR owes a goal check
-  at its boundary, below.
-- **If the plan has no Goals table**, it predates this discipline. Say so, lift
-  the goals from spec §0 yourself, and tell your human partner — do not execute a
-  plan whose definition of done you cannot state.
+1. **Before starting a PR:** create the sub-branch named in its decomposition row, from the feature branch, not from `main`.
+2. **Within the PR:** run the per-task loop for every task the PR covers.
+   **One PR per wave** (`writing-plans`): the wave's tasks run in parallel, each in its own worktree off the wave branch; once a task's review passes, `git merge --no-ff` it into the wave branch locally, so the reviewed history is kept. Push once, so CI runs once per wave, not once per task.
+   **Generated and shared files: once, at the end of the wave PR**: the regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and the architecture pages (`update-documentation`). Put them under `must_not_edit` in every task dispatch; never per task, per fix round, or in parallel branches.
+3. **After every task in the PR is complete and reviewed:** run the PR-boundary review before suggesting merge.
 
-🔴 **An AC passing is not a goal delivered.** ACs prove mechanisms; a goal is
-someone being able to do something. Every gate in this skill measures the former.
-Exactly one place measures the latter — the goal check at the PR boundary — and
-it is the reason a plan can go ten PRs deep, all green, with nobody able to use
-anything.
+### PR-boundary review (a single-PR plan runs this once, for the whole branch)
 
-## Per-PR boundary (multi-PR plans)
+**First, if this PR is the first delivery of a goal, check the goal, not its ACs.** Take the goal's row and answer one question: **can the named beneficiary now do the thing, in the running system?** Exercise it: drive the UI, call the endpoint as that role, read the screen. For anything user-visible this is a browser check, not a test run.
 
-A multi-PR plan includes a **PR decomposition table** with one row per PR
-(sub-branch, scope, ACs verified, contracts produced/consumed, frontend-touched
-flag) and a **per-PR merge gate**.
+- Delivered → record it against the goal's row and continue.
+- Not delivered, though the ACs are green → **stop.** The ACs prove a mechanism rather than the outcome. That is a finding for the plan, and possibly for spec §0's Proof line; take it upstream rather than adding tasks to route around it.
 
-🔴 **A Sketch-class plan has none of that, by design** — a Sketch spec is one PR, one
-phase. Do not report the absent PR table as a plan gap and do not invent one.
-Run the per-task loop, then go straight to the boundary review below, treating
-the whole branch as the single PR. If a plan is written as one PR but the work is
-visibly multi-PR, that is a **plan defect** — take it back to the plan, don't
-improvise a decomposition.
+**Then the merge gate.** Run the local gates once and push; CI's run on the head SHA is the binding suite result (Rule 1). Walk the plan's merge gate for this PR; every box is green before you suggest merge.
 
-For a multi-PR plan, organize the per-task loop above by PR:
+**Then two reviews, in sequence** (maintainability benefits from seeing the code-review findings):
 
-1. **Before starting a PR:** create the sub-branch named in the PR decomposition row (branch from the feature branch, not from `main`).
-2. **Within the PR:** dispatch the per-task loop (implementer → code-quality review → mark task complete) for every task the PR claims to cover.
-   🔴 **One PR per wave** (`writing-plans`): the wave's tasks run in parallel, each in its own worktree off the wave branch; once a task's review passes, `git merge --no-ff` it into the wave branch locally, so the reviewed history is kept. Push once — CI runs once per wave, not once per task.
-   🔴 **Generated and shared files: once, at the end of the wave PR** — the regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and the architecture pages (`update-documentation`). Put them under `must_not_edit` in every task dispatch; never per task, never per fix round, never in parallel branches. *Measured 2026-10-05: ~45 pages re-anchored after every fix round and rebase; the shared files conflicted when PRs were combined.*
-3. **After all the PR's tasks are complete and individually reviewed:** run the **PR-boundary review** before suggesting merge.
+1. **Code review** with `swisper-superpowers:requesting-code-review` (`code-reviewer.md`) over the PR range. It checks plan/spec alignment, AC coverage at promise altitude, the test list (`trace-check.sh` over the range quoted, net growth explained), contracts exercised across the consumer boundary, and front-to-back browser tests where frontend was touched.
+2. **Maintainability review** with `requesting-code-review/maintainability-reviewer.md`: structure against the caps, API discipline, naming, dead code and debt markers, decision debt (the architecture page's "Why it is like this" block), cross-component drift.
 
-### PR-boundary review (mandatory — a single-PR plan runs this once, for the whole branch)
+Apply both reviews' Critical and Important findings before proceeding; Minor findings go to the ledger for the final review. Then:
 
-**First, if this PR is the first delivery of a goal, check the GOAL — not its ACs.**
+- Regenerate the shared files once, now (step 2 above). If the repo has `architecture/tools/impact.py`, run `swisper-superpowers:update-documentation` on the PR's diff, so no PR leaves the boundary with its architecture pages stale.
+- Mark the PR complete in the plan's decomposition table.
+- **Suggest merge into the feature branch; don't auto-merge.** Merge after human / reviewer / project-tooling approval, then move to the next PR.
 
-Take the goal's row from the Goals table and answer one question: **can the named
-beneficiary now do the thing, in the running system?** Not "does `UBER-AC-1`
-pass" — actually exercise it: drive the UI, call the endpoint as that role, read
-the screen. For anything user-visible this is a browser check, not a test run.
-
-- ✅ delivered → record it against the goal's row and continue
-- ❌ not delivered, though the ACs are green → **STOP.** The ACs are proving a
-  mechanism rather than the outcome. That is a finding for the plan and possibly
-  for spec §0's Proof line, and it goes upstream — do not add tasks to route
-  around it.
-
-This is the only check in the whole pipeline that measures value rather than
-correctness, and it is cheap: one PR, one goal, a few minutes.
-
-Then dispatch TWO subagents in sequence (not in parallel — maintainability review benefits from seeing code-review findings):
-
-1. **Code review** using `superpowers:requesting-code-review/code-reviewer.md`. Reviewer checks: plan/spec alignment, AC coverage with AC-named tests, **the test list against the plan — untraced or mechanism-only tests are Important, `trace-check.sh` over the PR range is quoted, net test growth explained**, contract integrity (exercised across consumer boundary), code quality, architecture, production readiness, frontend Playwright if applicable, no new `// @ts-ignore` / `// eslint-disable` in diff.
-2. **Maintainability review** using `superpowers:requesting-code-review/maintainability-reviewer.md`. Reviewer checks: structural consistency (size/complexity caps), public/internal API discipline, naming consistency, dead code / debt markers, ADR debt, cross-component drift.
-
-Apply each review's Critical / High / Important findings before proceeding. Then:
-
-- Regenerate the shared files once, now (step 2 above), then — if the repo has `architecture/tools/impact.py` — run `swisper-superpowers:update-documentation` on the PR's diff — a PR does not leave the boundary with its architecture pages stale
-- Update the plan's PR decomposition table to mark the PR complete
-- **Suggest merge into the feature branch — do NOT auto-merge**
-- After human / reviewer / project tooling approval, merge the sub-branch into the feature branch
-- Move to the next PR
-
-Per-task review (code quality) and per-PR review (goal check + code + maintainability) are BOTH mandatory; they catch different things. Per-task review prevents in-PR drift; per-PR review catches whole-PR concerns — cross-task consistency, contract integrity at the boundary, debt accumulated across the PR's tasks, and whether the goal was actually delivered.
+The per-task review and the per-PR boundary review are both required: the first prevents drift inside a task; the second catches cross-task consistency, contract integrity at the boundary, debt accumulated across tasks, and whether the goal was delivered.
 
 ### Final code review (multi-PR plans, after all PRs)
 
-Once every PR in the decomposition has been merged into the feature branch, dispatch one **final code reviewer** subagent for the whole feature-branch diff (not just the last PR). This catches drift that survived per-PR review — typically end-to-end contract behavior, accumulated debt, integration concerns spanning multiple PRs.
+Once every PR has merged into the feature branch, dispatch one **final code reviewer** for the whole feature-branch diff, pointed at the ledger's deferred minors. It catches what survived per-PR review: end-to-end contract behaviour, accumulated debt, concerns spanning PRs.
 
-**A single-PR plan skips this** — its PR-boundary review already covered the whole branch, and a second whole-branch pass over the same diff is a re-review with no delta. Before proceeding, confirm every goal in the Goals table is recorded as delivered.
+**A single-PR plan skips this**: its boundary review already covered the whole branch.
 
-Then proceed to `superpowers:finishing-a-development-branch`.
+Before proceeding, confirm every goal in the Goals table is recorded as delivered. Then use `swisper-superpowers:finishing-a-development-branch`.
 
 ## Example Workflow
 
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
-[Read plan file once: plans/<product>/2026-10-05-feature-plan.md in Swisper_Documentation]
-[Extract all 5 tasks with full text and context]
-[Create TodoWrite with all tasks]
+[Read the plan once: plans/<product>/2026-10-05-feature-plan.md in Swisper_Documentation]
+[Extract all 5 tasks with full text; assign tiers; create TodoWrite]
 
 Task 1: Hook installation script
-
-[Get Task 1 text and context (already extracted)]
-[Dispatch implementation subagent with full task text + context]
+[Dispatch implementer with full task text, goal, gates, test list]
 
 Implementer: "Before I begin - should the hook be installed at user or system level?"
-
 You: "User level (~/.config/superpowers/hooks/)"
 
-Implementer: "Got it. Implementing now..."
-[Later] Implementer:
+Implementer:
   - Implemented install-hook command
   - Tests +2 (B-AC-1 install at user level, FM-1 existing hook refused) ~0 −0;
     trace-check PASS; 2/2 passing
-  - Self-review: Found I missed --force flag, added it
+  - Self-review: found I missed --force flag, added it
   - Committed
 
 [Ledger] Task 1 @ a7c31f9: tsc 0 · lint 0 · touched-suite 2 green · tests +2 ~0 −0
 
-[Dispatch code quality reviewer — and START TASK 2's implementer at the same time;
- the reviewer is a reader, task 2 doesn't consume task 1's artifact]
-Code reviewer: Strengths: each AC proved at the CLI boundary. Issues: None. Approved.
-
+[Dispatch code-quality review, and start task 2's implementer at the same time:
+ the reviewer is a reader, and task 2 doesn't consume task 1's artifact]
+Reviewer: Strengths: each AC proved at the CLI boundary. Issues: none. Approved.
 [Mark Task 1 complete]
 
-Task 2: Recovery modes  (already running, in parallel with task 1's review)
-
-Implementer: [No questions, proceeds]
+Task 2: Recovery modes (already running)
 Implementer:
   - Added verify/repair modes
-  - Ran only the touched test files: 8/8 passing (full suite NOT run — leaf module)
-  - Self-review: All good
+  - Ran the touched test files: 8/8 passing
   - Committed
 
 [Ledger] Task 2 @ 3fd0e14: tsc 0 · lint 0 · touched-suite 8 green
 
-[Dispatch code quality reviewer]
-Code reviewer: Issues (Important): Magic number (100). T-AC-4 ("report every 100
-  items") is asserted on 50 items only — the test cannot fail on the interval.
-  Also Important: `verify calls repair once` is a mock-call count naming no id — delete.
+Reviewer: Important: magic number (100). T-AC-4 ("report every 100 items") is
+  asserted on 50 items only, so the test cannot fail on the interval.
+  Important: `verify calls repair once` is a mock-call count naming no id: delete.
 
-[Fix round 1/3 — resume the same implementer]
+[Fix round 1/3, resume the same implementer]
 Implementer: Extracted PROGRESS_INTERVAL; strengthened T-AC-4 to repair 250 items and
   assert reports at 100 and 200; deleted the mock-count test. Tests +0 ~1 −1, 7/7 green
 
 [Fix touched logic → scoped re-review]
-Code reviewer: Both ADDRESSED, no new breakage in the fix diff. ✅
-
+Re-reviewer: Both ADDRESSED, no new breakage in the fix diff.
 [Mark Task 2 complete]
 
 ...
 
 [PR boundary]
-GOAL CHECK — G-1: ran the CLI as an operator, saw progress reported every 100
-  items on a 1,000-item repair. Beneficiary can do the thing. ✅
-[Full suite + every gate, once — this is the binding run]
-  tsc 0 · tsc -p tsconfig.test.json 0 · lint 0 · 251 green · complexity 239/239
-[Dispatch PR code review, then maintainability review]
+GOAL CHECK — G-1: ran the CLI as an operator, saw progress every 100 items on a
+  1,000-item repair. The beneficiary can do the thing.
+[Local gates once, then push] tsc 0 · tsc -p tsconfig.test.json 0 · lint 0 · complexity 239/239
+[CI on 9c2e1a4, the binding run] 251 green
+[Merge gate walked; dispatch PR code review, then maintainability review]
 trace-check origin/feature...HEAD: 9 added, 4 removed (net +5) · 9 traced · 0 untraced
-Reviewers: All ACs covered by AC-named tests at the boundary, contracts exercised by
+Reviewers: all ACs covered by AC-named tests at the boundary, contracts exercised by
   a consumer, net +5 explained (5 ACs, no shadows). Ready to merge.
-
-Done!
 ```
-
-## Parallel safety
-
-⚠ **Not parallel-safe by default.** An earlier version of this skill claimed
-"subagents don't interfere". They do: two MUTATING agents in one working tree
-produce silent false greens, not conflicts — see "One working tree, one mutating
-agent". Parallelism is safe only across separate worktrees, or between readers.
 
 ## Red Flags
 
-**Never:**
-- Start implementation on main/master branch without explicit user consent
-- Drop a task's review tier BELOW what "Match the review to the task" assigns — and never reduce a user-visible surface below both reviews plus the render gate. (Dropping the spec review on a declarative task is not "skipping review", it is the assigned tier; decide it when you extract the task, never after the implementer reports.)
-- Proceed with unfixed issues
-- Dispatch two MUTATING subagents into the same working tree (see below — the
-  failure is silent false greens, not conflicts)
-- Make subagent read plan file (provide full text instead)
-- Skip scene-setting context (subagent needs to understand where task fits)
-- Ignore subagent questions (answer before letting them proceed)
-- Accept "close enough" on an AC (a missing or mis-levelled AC-named test IS the spec-compliance failure now — treat it as blocking, not as a nit)
-- Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
-- Move to next task while any assigned review has open issues
-- Answer a finding or a surviving mutant with a NEW test while an existing test claims the behaviour — strengthen it
-- Accept a report that counts tests added but not deleted, or a PR whose net test growth nobody explained
-
-**If subagent asks questions:**
-- Answer clearly and completely — with the property and its failing test, not a mechanism (see "Rule on the property, not the mechanism")
-- Provide additional context if needed
-- Don't rush them into implementation
-
-**If reviewer finds issues:**
-- Implementer (same subagent) fixes them
-- Reviewer reviews again
-- Repeat until approved
-- Don't skip the re-review
-
-**If subagent fails task:**
-- Dispatch fix subagent with specific instructions
-- Don't try to fix manually (context pollution)
+- Starting implementation on main/master without your human partner's explicit consent.
+- Making a subagent read the plan file instead of pasting the full task text.
+- Skipping scene-setting context, or letting a subagent proceed with an unanswered question. Answer clearly and completely, with the property and its failing test rather than a mechanism, and don't rush it into implementation.
+- Accepting "close enough" on an AC: a missing or mis-levelled AC-named test is blocking, not a nit.
+- Letting the implementer's self-review stand in for the review.
+- Marking a task complete while its review has open Critical or Important findings that were not parked at the breaker.
+- Dropping a task's review tier below what was assigned at extraction; a user-visible surface never goes below the code-quality review plus the render gate.
 
 ## Integration
 
 **Required workflow skills:**
-- **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
-- **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - Code review template for reviewer subagents
-- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+- **swisper-superpowers:using-git-worktrees**: the isolated workspace
+- **swisper-superpowers:writing-plans**: creates the plan this skill executes
+- **swisper-superpowers:requesting-code-review**: the reviewer templates
+- **swisper-superpowers:finishing-a-development-branch**: completes the work after all tasks
 
-**Subagents should use:**
-- **superpowers:test-driven-development** - Subagents follow TDD for each task
+**Subagents use:**
+- **swisper-superpowers:test-driven-development**: TDD for each task
 
 **Alternative workflow:**
-- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+- **swisper-superpowers:executing-plans**: execution in a parallel session

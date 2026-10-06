@@ -92,10 +92,12 @@ vacuously true, and a checker that verified nothing must not report success.
 
 ## Using it outside Swisper
 
-Nothing here is Swisper-specific by design, but the examples are ours. Where a
-rule cites a measurement — *"7 running environments, 25 containers, 7.9 GB for 2
-active lanes"* — that number is why the rule exists, and it is kept deliberately:
-a rule without its evidence is just an opinion with formatting.
+Nothing here is Swisper-specific by design, but the examples are ours. A skill
+states its rules, each with at most one clause of reason. The evidence behind a
+rule (the measurement, the incident, the ruling) lives in
+[CHANGELOG.md](CHANGELOG.md) and, for an enhancement over upstream, in its row of
+[DIVERGENCE.md](DIVERGENCE.md). Look there for why a rule exists; keeping it out
+of the skill keeps the skill short enough to be followed.
 
 Programme identity (lane names, repo root, ports, goals) belongs in a
 `program.yaml` at your programme root, never hard-coded in a script. See

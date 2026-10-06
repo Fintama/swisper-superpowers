@@ -4,49 +4,41 @@
 
 ## Overview
 
-Tests must verify real behavior, not mock behavior. Mocks are a means to isolate, not the thing being tested.
+Tests verify real behavior, not mock behavior. Mocks are a means to isolate, not the thing being tested. Writing the test first and watching it fail against real code prevents most of what follows.
 
-**Core principle:** Test what the code does, not what the mocks do.
-
-**Following strict TDD prevents these anti-patterns.**
-
-## The Iron Laws
+## The three rules
 
 ```
-1. NEVER test mock behavior
-2. NEVER add test-only methods to production classes
-3. NEVER mock without understanding dependencies
+1. Don't test mock behavior
+2. Don't add test-only methods to production classes
+3. Don't mock without understanding the dependency
 ```
 
 ## Anti-Pattern 1: Testing Mock Behavior
 
 **The violation:**
 ```typescript
-// ❌ BAD: Testing that the mock exists
-test('renders sidebar', () => {
+// ❌ BAD: asserts that the mock exists
+test('B-AC-4: the page shows the navigation sidebar', () => {
   render(<Page />);
   expect(screen.getByTestId('sidebar-mock')).toBeInTheDocument();
 });
 ```
 
-**Why this is wrong:**
-- You're verifying the mock works, not that the component works
-- Test passes when mock is present, fails when it's not
-- Tells you nothing about real behavior
+**Why this is wrong:** it verifies the mock, not the component. It passes when the mock is present and tells you nothing about real behavior.
 
 **your human partner's correction:** "Are we testing the behavior of a mock?"
 
 **The fix:**
 ```typescript
-// ✅ GOOD: Test real component or don't mock it
-test('renders sidebar', () => {
-  render(<Page />);  // Don't mock sidebar
+// ✅ GOOD: the real sidebar, asserted by its role
+test('B-AC-4: the page shows the navigation sidebar', () => {
+  render(<Page />);
   expect(screen.getByRole('navigation')).toBeInTheDocument();
 });
-
-// OR if sidebar must be mocked for isolation:
-// Don't assert on the mock - test Page's behavior with sidebar present
 ```
+
+If the sidebar must be mocked for isolation, don't assert on the mock: test Page's own behavior with the sidebar present.
 
 ### Gate Function
 
@@ -56,38 +48,30 @@ BEFORE asserting on any mock element:
 
   IF testing mock existence:
     STOP - Delete the assertion or unmock the component
-
-  Test real behavior instead
 ```
 
 ## Anti-Pattern 2: Test-Only Methods in Production
 
 **The violation:**
 ```typescript
-// ❌ BAD: destroy() only used in tests
+// ❌ BAD: destroy() is only called from tests
 class Session {
-  async destroy() {  // Looks like production API!
+  async destroy() {
     await this._workspaceManager?.destroyWorkspace(this.id);
-    // ... cleanup
   }
 }
 
-// In tests
 afterEach(() => session.destroy());
 ```
 
 **Why this is wrong:**
-- Production class polluted with test-only code
+- Production class polluted with test-only code, which looks like production API
 - Dangerous if accidentally called in production
-- Violates YAGNI and separation of concerns
 - Confuses object lifecycle with entity lifecycle
 
 **The fix:**
 ```typescript
-// ✅ GOOD: Test utilities handle test cleanup
-// Session has no destroy() - it's stateless in production
-
-// In test-utils/
+// ✅ GOOD: test-utils/ owns the cleanup; Session has no destroy()
 export async function cleanupSession(session: Session) {
   const workspace = session.getWorkspaceInfo();
   if (workspace) {
@@ -95,7 +79,6 @@ export async function cleanupSession(session: Session) {
   }
 }
 
-// In tests
 afterEach(() => cleanupSession(session));
 ```
 
@@ -104,47 +87,39 @@ afterEach(() => cleanupSession(session));
 ```
 BEFORE adding any method to production class:
   Ask: "Is this only used by tests?"
-
   IF yes:
-    STOP - Don't add it
-    Put it in test utilities instead
+    Don't add it. Put it in test utilities instead.
 
   Ask: "Does this class own this resource's lifecycle?"
-
   IF no:
-    STOP - Wrong class for this method
+    Wrong class for this method.
 ```
 
 ## Anti-Pattern 3: Mocking Without Understanding
 
 **The violation:**
 ```typescript
-// ❌ BAD: Mock breaks test logic
-test('detects duplicate server', () => {
-  // Mock prevents config write that test depends on!
-  vi.mock('ToolCatalog', () => ({
-    discoverAndCacheTools: vi.fn().mockResolvedValue(undefined)
-  }));
+// ❌ BAD: the mock removes the config write the duplicate check depends on
+vi.mock('ToolCatalog', () => ({
+  discoverAndCacheTools: vi.fn().mockResolvedValue(undefined)
+}));
 
+test('FM-1: adding the same server twice is refused', async () => {
   await addServer(config);
-  await addServer(config);  // Should throw - but won't!
+  await expect(addServer(config)).rejects.toThrow('DUPLICATE_SERVER');
 });
 ```
 
-**Why this is wrong:**
-- Mocked method had side effect test depended on (writing config)
-- Over-mocking to "be safe" breaks actual behavior
-- Test passes for wrong reason or fails mysteriously
+**Why this is wrong:** the mocked method had a side effect the test depended on, so the test passes for the wrong reason or fails mysteriously. Over-mocking "to be safe" breaks actual behavior.
 
 **The fix:**
 ```typescript
-// ✅ GOOD: Mock at correct level
-test('detects duplicate server', () => {
-  // Mock the slow part, preserve behavior test needs
-  vi.mock('MCPServerManager'); // Just mock slow server startup
+// ✅ GOOD: mock only the slow server startup; the config write stays real
+vi.mock('MCPServerManager');
 
-  await addServer(config);  // Config written
-  await addServer(config);  // Duplicate detected ✓
+test('FM-1: adding the same server twice is refused', async () => {
+  await addServer(config);
+  await expect(addServer(config)).rejects.toThrow('DUPLICATE_SERVER');
 });
 ```
 
@@ -152,8 +127,6 @@ test('detects duplicate server', () => {
 
 ```
 BEFORE mocking any method:
-  STOP - Don't mock yet
-
   1. Ask: "What side effects does the real method have?"
   2. Ask: "Does this test depend on any of those side effects?"
   3. Ask: "Do I fully understand what this test needs?"
@@ -178,32 +151,24 @@ BEFORE mocking any method:
 
 **The violation:**
 ```typescript
-// ❌ BAD: Partial mock - only fields you think you need
+// ❌ BAD: only the fields this test reads; downstream code reads metadata.requestId
 const mockResponse = {
   status: 'success',
   data: { userId: '123', name: 'Alice' }
-  // Missing: metadata that downstream code uses
 };
-
-// Later: breaks when code accesses response.metadata.requestId
 ```
 
-**Why this is wrong:**
-- **Partial mocks hide structural assumptions** - You only mocked fields you know about
-- **Downstream code may depend on fields you didn't include** - Silent failures
-- **Tests pass but integration fails** - Mock incomplete, real API complete
-- **False confidence** - Test proves nothing about real behavior
+**Why this is wrong:** a partial mock hides structural assumptions. Downstream code may depend on fields you didn't include, so the test passes and the integration fails.
 
-**The Iron Rule:** Mock the COMPLETE data structure as it exists in reality, not just fields your immediate test uses.
+**The rule:** mock the complete data structure as it exists in reality, not just the fields your immediate test uses.
 
 **The fix:**
 ```typescript
-// ✅ GOOD: Mirror real API completeness
+// ✅ GOOD: every field the real API returns
 const mockResponse = {
   status: 'success',
   data: { userId: '123', name: 'Alice' },
   metadata: { requestId: 'req-789', timestamp: 1234567890 }
-  // All fields real API returns
 };
 ```
 
@@ -218,10 +183,6 @@ BEFORE creating mock responses:
     2. Include ALL fields system might consume downstream
     3. Verify mock matches real response schema completely
 
-  Critical:
-    If you're creating a mock, you must understand the ENTIRE structure
-    Partial mocks fail silently when code depends on omitted fields
-
   If uncertain: Include all documented fields
 ```
 
@@ -234,34 +195,23 @@ BEFORE creating mock responses:
 "Ready for testing"
 ```
 
-**Why this is wrong:**
-- Testing is part of implementation, not optional follow-up
-- TDD would have caught this
-- Can't claim complete without tests
+**Why this is wrong:** testing is part of implementation, not a follow-up. Work without its tests is not complete.
 
-**The fix:**
-```
-TDD cycle:
-1. Write failing test
-2. Implement to pass
-3. Refactor
-4. THEN claim complete
-```
+**The fix:** the TDD cycle: write the failing test, implement to pass, refactor, then claim complete.
 
 ## Anti-Pattern 6: Shared Global State Between Tests
 
 **The violation:**
 ```typescript
-// ❌ BAD: tests mutate module-level state
+// ❌ BAD: the second test passes only if the first ran before it
 const cache = new Map<string, User>();
 
-test('caches user on first lookup', async () => {
+test('B-AC-6: a looked-up user is returned', async () => {
   await getUser('alice');
   expect(cache.has('alice')).toBe(true);
 });
 
-test('returns cached user on second lookup', async () => {
-  // Depends on previous test having run! Flake-amplifier.
+test('FM-3: a cached user is still returned when the user store is down', async () => {
   expect(cache.has('alice')).toBe(true);
 });
 ```
@@ -269,8 +219,7 @@ test('returns cached user on second lookup', async () => {
 **Why this is wrong:**
 - The second test only passes if the first ran before it
 - Random execution order (`vitest --shuffle`) breaks the suite
-- The fail mode is "passes on my machine, fails in CI" — debugging hell
-- Hides ordering bugs in the system under test
+- It passes locally and fails in CI, and hides ordering bugs in the system under test
 
 ### Gate Function
 
@@ -285,21 +234,22 @@ BEFORE writing a test that reads existing state:
     STOP — refactor. Each test sets up its own state.
 ```
 
-**The fix:**
+**The fix:** each test owns its setup and asserts what the caller receives, not the cache's internals.
 
 ```typescript
-// ✅ GOOD: each test owns its setup
-test('caches user on first lookup', async () => {
-  const cache = new Map<string, User>();
-  await getUser('alice', { cache });
-  expect(cache.has('alice')).toBe(true);
+// ✅ GOOD
+test('B-AC-6: a looked-up user is returned', async () => {
+  const store = fakeUserStore({ alice: { id: 'alice', name: 'Alice' } });
+  expect(await getUser('alice', { cache: new Map(), store })).toEqual({ id: 'alice', name: 'Alice' });
 });
 
-test('returns cached user on second lookup', async () => {
+test('FM-3: a cached user is still returned when the user store is down', async () => {
   const cache = new Map<string, User>();
-  await getUser('alice', { cache });
-  await getUser('alice', { cache });
-  expect(getUserCallCount('alice')).toBe(1);  // assert behavior, not internal state
+  const store = fakeUserStore({ alice: { id: 'alice', name: 'Alice' } });
+  await getUser('alice', { cache, store });
+  store.goDown();
+
+  expect(await getUser('alice', { cache, store })).toEqual({ id: 'alice', name: 'Alice' });
 });
 ```
 
@@ -309,23 +259,19 @@ Configure the test runner to randomize order at least nightly. If random-order f
 
 **The violation:**
 ```typescript
-// ❌ BAD: retries hide a real race condition
-// vitest.config.ts
+// ❌ BAD: vitest.config.ts
 export default defineConfig({
   test: { retry: 3, ... }
 });
 
-// playwright.config.ts
+// ❌ BAD: playwright.config.ts
 export default defineConfig({
   retries: 3,
   ...
 });
 ```
 
-**Why this is wrong:**
-- A test that passes 1 time in 3 has a real bug — either in the test (timing assumption) or in the system (race condition)
-- Retries hide the bug and train the team to ignore failures
-- Production users don't get retries; the bug ships
+**Why this is wrong:** a test that passes 1 time in 3 has a real bug, either in the test (a timing assumption) or in the system (a race). Retries hide it, train the team to ignore failures, and ship the bug to users, who get no retries.
 
 ### Gate Function
 
@@ -350,7 +296,7 @@ BEFORE adding `retry`, `retries`, `retryTimes`, or any retry config:
 
 **The violation:**
 ```typescript
-// ❌ BAD: production code branches on test env var
+// ❌ BAD: production code branches on a test env var
 function authenticate(token: string) {
   if (process.env.NODE_ENV === 'test') {
     return { user: 'test-user', skipChecks: true };
@@ -360,23 +306,20 @@ function authenticate(token: string) {
 ```
 
 **Why this is wrong:**
-- Production code has paths that only execute in tests — coverage of "real" code is fake
-- The "real" code path has never been exercised by the test suite
+- The real code path is never exercised by the test suite, so its coverage is fake
 - Forgetting the env var in some prod environment ships the bypass to production
 
-**The fix:** dependency-inject the dependency. Tests pass a fake; production passes the real.
+**The fix:** inject the dependency. Tests pass a fake; production passes the real one.
 
 ```typescript
-// ✅ GOOD: dependency-injected, no env-var branching
+// ✅ GOOD
 function authenticate(token: string, authProvider: AuthProvider) {
   return authProvider.verify(token);
 }
 
-// In tests
 const fakeAuthProvider = { verify: () => ({ user: 'test-user' }) };
 authenticate('any', fakeAuthProvider);
 
-// In production
 authenticate(token, realAuthProvider);
 ```
 
@@ -384,14 +327,12 @@ authenticate(token, realAuthProvider);
 
 **The violation:**
 ```typescript
-// ❌ BAD: frontend unit test against mocked backend, claimed as full coverage
-import { vi } from 'vitest';
-
+// ❌ BAD: frontend unit test against a mocked backend, claimed as the B-AC's proof
 vi.mock('../api/chat', () => ({
   sendMessage: vi.fn().mockResolvedValue({ id: 1, text: 'reply' }),
 }));
 
-test('B-AC-1: chat workflow works', async () => {
+test('B-AC-1: a sent message is answered and stored', async () => {
   render(<ChatPage />);
   await userEvent.type(screen.getByRole('textbox'), 'hello');
   await userEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -400,10 +341,9 @@ test('B-AC-1: chat workflow works', async () => {
 ```
 
 **Why this is wrong:**
-- The mock replaces the system under test (the contract between frontend and backend)
+- The mock replaces the system under test: the contract between frontend and backend
 - A green frontend unit test against a mocked backend can co-exist with a broken contract
-- The bug only surfaces when frontend and backend run together
-- "B-AC-1" claim is false: the business AC is end-to-end, not "the frontend renders the right thing if the backend hypothetically returns the right shape"
+- The "B-AC-1" claim is false: the business AC is end-to-end, not "the frontend renders the right thing if the backend hypothetically returns the right shape"
 
 ### Gate Function
 
@@ -419,19 +359,16 @@ BEFORE labeling a frontend unit test as verifying a B-AC-N:
     the browser test cannot reach). An unlabelled test is not an option.
 ```
 
-**The fix:** the B-AC is proved by a Playwright front-to-back test that exercises the real contract, and the mocked unit test goes in the same PR:
+**The fix:** the B-AC is proved by a Playwright front-to-back test that exercises the real contract and asserts the back-end effect, which a frontend unit test can't; the mocked unit test goes in the same PR:
 
 ```typescript
-// ✅ GOOD: front-to-back; tests the real contract
-test('B-AC-1: chat workflow works', async ({ page, request }) => {
+// ✅ GOOD: front to back, through the real contract
+test('B-AC-1: a sent message is answered and stored', async ({ page, request }) => {
   await page.goto('/chat');
   await page.getByRole('textbox').fill('hello');
   await page.getByRole('button', { name: /send/i }).click();
 
-  // UI assertion
   await expect(page.getByTestId('reply')).toBeVisible();
-
-  // Back-end effect — the part frontend unit tests can't prove
   const messages = await request.get('/api/chat/messages').then(r => r.json());
   expect(messages).toContainEqual(expect.objectContaining({ text: 'hello' }));
 });
@@ -448,12 +385,9 @@ Result: tests like
   test('User type has id field', () => { /* trivial */ });
 ```
 
-**Why this is wrong:**
-- Coverage gamed up by tests that catch nothing
-- TDD-driven coverage of 80% catches bugs; gamed coverage of 95% catches nothing
-- The team learns "coverage = checkbox" instead of "coverage = signal"
+**Why this is wrong:** coverage gamed up by tests that catch nothing. TDD-driven coverage of 80% catches bugs; gamed coverage of 95% catches nothing.
 
-**The fix:** coverage is a regression-floor, not a target. Run mutation testing on critical code (Stryker) to verify tests would catch real bugs. If TDD-driven coverage is far below the floor, that's a signal of skipped tests OR hard-to-reach branches that suggest design problems — not a "raise the number" project.
+**The fix:** coverage is a regression floor, not a target. Run mutation testing on critical code (Stryker) to verify tests would catch real bugs. If TDD-driven coverage is far below the floor, that signals skipped tests or hard-to-reach branches that suggest design problems, not a "raise the number" project.
 
 ## Anti-Pattern 11: The Untraced Unit Test (the shadow)
 
@@ -469,10 +403,9 @@ test('POST /orders calls store.save exactly once', …);
 ```
 
 **Why this is wrong:**
-- The second test proves what the first already proves — twice the run cost on every merge, forever, for one proof
+- The second test proves what the first already proves: twice the run cost on every merge, for one proof
 - It names a place ("pricing:", "spec §4") instead of a promise, so nobody can tell which AC breaks when it goes red
 - The mock-count test passes while the order is saved with the wrong total
-- Measured 2026-10-05: agents under the old pyramid wrote 11 such tests beside 7 route tests for one route, and answered three review findings with 8 more — 0 strengthened, 0 deleted
 
 ### Gate Function
 
@@ -497,17 +430,7 @@ BEFORE writing a test below the boundary:
 
 **your human partner's question:** "Do we need to be using a mock here?"
 
-**Consider:** Integration tests with real components often simpler than complex mocks
-
-## TDD Prevents These Anti-Patterns
-
-**Why TDD helps:**
-1. **Write test first** → Forces you to think about what you're actually testing
-2. **Watch it fail** → Confirms test tests real behavior, not mocks
-3. **Minimal implementation** → No test-only methods creep in
-4. **Real dependencies** → You see what the test actually needs before mocking
-
-**If you're testing mock behavior, you violated TDD** - you added mocks without watching test fail against real code first.
+**Consider:** integration tests with real components are often simpler than complex mocks.
 
 ## Quick Reference
 
@@ -525,21 +448,3 @@ BEFORE writing a test below the boundary:
 | Frontend unit as B-AC substitute | Playwright front-to-back asserting back-end effect |
 | Coverage as goal | Coverage is outcome; mutation-test critical code |
 | Untraced / shadow unit test | Name the id or delete; strengthen the boundary test's table |
-
-## Red Flags
-
-- Assertion checks for `*-mock` test IDs
-- Methods only called in test files
-- Mock setup is >50% of test
-- Test fails when you remove mock
-- Can't explain why mock is needed
-- Mocking "just to be safe"
-- A test title with no AC / INV / FM id
-
-## The Bottom Line
-
-**Mocks are tools to isolate, not things to test.**
-
-If TDD reveals you're testing mock behavior, you've gone wrong.
-
-Fix: Test real behavior or question why you're mocking at all.

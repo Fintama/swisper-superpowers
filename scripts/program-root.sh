@@ -5,8 +5,7 @@
 #   PROGRAM_DIR   where its state lives (default: $PROGRAM_ROOT/.handover)
 #
 # Resolution: explicit argument -> environment -> program.yaml -> fail loudly.
-# ⚠ Never guesses. A wrong root reads another programme's mailbox and reports on
-# it as if it were yours.
+# Never guesses: a wrong root reads another programme's mailbox as if it were yours.
 program_resolve() {
     if [ -n "${1:-}" ]; then PROGRAM_ROOT="$1"; fi
     if [ -z "${PROGRAM_ROOT:-}" ] && [ -n "${PROGRAM_YAML:-}" ]; then

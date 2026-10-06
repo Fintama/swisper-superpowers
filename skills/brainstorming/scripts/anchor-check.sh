@@ -1,29 +1,15 @@
 #!/usr/bin/env bash
 # anchor-check.sh — do the spec's codebase anchors point at anything real?
 #
-# WHY THIS ONE IS A GATE, when the grep gate that used to live here was NOT.
-# A mechanical check earns its place when it compares TWO INDEPENDENT SOURCES and
-# can therefore be visibly wrong. This compares the SPEC against the REPO. The
-# gate cut on 2026-08-12 (spec-check.sh) counted strings inside the document it
-# was checking, so it could only ever report that the string was present:
-# `Who benefits: the system` passed it. Do not add anything of that shape here.
+# Compares the spec against the repo, so it can be visibly wrong. Do not add checks
+# that only count strings inside the spec: those pass on `Who benefits: the system`.
 #
-# WHAT IT CHECKS — existence only:
-#   · every `path:line` anchor resolves to a file that exists
-#   · the line number is inside that file
-#   · every `path::symbol` seam names a file that exists, and the symbol appears in it
-#
-# WHAT IT DOES NOT CHECK, deliberately:
-#   whether the code at the anchor actually DOES what `today` says. That is a
-#   read, and it is spec-review Gate 2's job. A script cannot judge it, and a
-#   script that pretended to would be the cut gate wearing a new name.
+# Checks existence only: every `path:line` resolves to a file with that many lines,
+# and every `path::symbol` names a file that contains the symbol. Whether the code
+# does what `today` says is a read (self-review check 7), not this.
 #
 # Usage:  bash anchor-check.sh <spec.md> [repo-root]        (repo-root defaults to $PWD)
 # Exit:   0 = every anchor resolves, 1 = at least one does not, 2 = usage error
-#
-# Positive-control it before trusting it: break one anchor on purpose and confirm
-# it goes red, then restore. A gate never seen failing is a claim, not a
-# measurement.
 
 set -uo pipefail
 
@@ -42,22 +28,18 @@ note(){ printf '  \033[33m·\033[0m %s\n' "$*"; }
 echo "anchor-check: $SPEC  against  $ROOT"
 
 # ---- path:line anchors -------------------------------------------------------
-# Matches src/a/b.ts:214 and skills/x/SKILL.md:245-249 (range → check the start).
-# Requires a path separator or an extension so prose like "Foundry 2026-07-29"
-# and "p95:200" are not mistaken for anchors.
+# Matches src/a/b.ts:214 and skills/x/SKILL.md:245-249 (a range checks its start).
+# The extension requirement keeps prose like "p95:200" out.
 echo
 echo "Anchors (path:line)"
-# NOTE: `mapfile` is a bash 4 builtin and macOS ships bash 3.2, where it fails
-# and — because this script does not `set -e` — the run continued and printed
-# PASS. A false green, in the gate written to catch false greens. Caught by the
-# positive control on the first run, 2026-08-12. Portable read loop instead.
+# No `mapfile`: macOS ships bash 3.2, where it fails and this script would print PASS.
 ANCHORS=""
 while IFS= read -r a; do ANCHORS="$ANCHORS$a
 "; done < <(grep -oE '[A-Za-z0-9_./-]+\.[A-Za-z0-9]+:[0-9]+(-[0-9]+)?' "$SPEC" | sort -u)
 ANCHORS=$(printf '%s' "$ANCHORS")
 
 if [[ -z "$ANCHORS" ]]; then
-  note "none found — correct for a spec whose changes are all ADDED, suspicious otherwise"
+  note "none in path:line form"
 else
   ok=0
   while IFS= read -r a; do
@@ -65,11 +47,8 @@ else
     path="${a%%:*}"; rest="${a#*:}"; line="${rest%%-*}"
     file="$ROOT/$path"
     if [[ ! -f "$file" ]]; then
-      # Match on the PATH SUFFIX, not the basename. A spec that writes
-      # `brainstorming/SKILL.md` inside a repo whose file is at
-      # `skills/brainstorming/SKILL.md` is being reasonable; matching on the
-      # basename alone would make every SKILL.md in the tree a candidate and
-      # report "ambiguous" for all of them. Measured on the first real run.
+      # Match the path suffix, not the basename: `brainstorming/SKILL.md` must find
+      # `skills/brainstorming/SKILL.md` without matching every SKILL.md in the tree.
       hits=$(find "$ROOT" -path "*/$path" -not -path '*/.git/*' -not -path '*/node_modules/*' 2>/dev/null | head -3)
       cnt=$(printf '%s' "$hits" | grep -c . || true)
       if (( cnt == 0 )); then
@@ -100,7 +79,7 @@ while IFS= read -r x; do SEAMS="$SEAMS$x
 SEAMS=$(printf '%s' "$SEAMS")
 
 if [[ -z "$SEAMS" ]]; then
-  note "none in path::symbol form"
+  note "none in path::symbol form — correct only if every change is ADDED"
 else
   ok=0
   while IFS= read -r s; do

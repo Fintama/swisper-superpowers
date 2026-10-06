@@ -3,18 +3,17 @@
 #
 # Rule R2 of test-driven-development: a test's title carries an AC id
 # (UBER-AC-n / B-AC-n / T-AC-n), an invariant id (INV-x, I-n / In) or a
-# documented failure mode (FM-x — a bug ticket is FM-<ticket>). A test that can
-# name none is not written. This script is the mechanical half of that rule.
+# documented failure mode (FM-x; a bug ticket is FM-<ticket>).
 #
 #   usage:  trace-check.sh [RANGE]        RANGE defaults to origin/main...HEAD
-#           trace-check.sh --self-test    positive control: 24 fixture diffs, red and green
+#           trace-check.sh --self-test    positive control: fixture diffs, red and green
 #
 #   exit 0  every new test case is traced (or allowed, with a reason)
 #   exit 1  at least one new test case is untraced — each is listed
 #   exit 2  could not run (bad range, not a git repo)
 #
 # Reads: vitest/jest/node:test/playwright `it(` / `test(` (incl. .only/.skip/
-# .each/…), and pytest `def test_…`. Only the test's OWN title is read — an id
+# .each/…), and pytest `def test_…`. Only the test's own title is read: an id
 # on an enclosing describe() does not count, because the diff cannot see it.
 #
 # Escape (the allow-list): `trace-allow: <reason>` in a comment on the test's
@@ -24,20 +23,17 @@
 #
 # Extra id shapes for one project: TRACE_CHECK_ID_RE='AUTH_[0-9]{3}' (ERE).
 #
-# Also prints tests ADDED and REMOVED in the range, so a PR report can state its
-# net test growth (R7) from a measurement rather than a memory.
+# Also prints tests added and removed in the range, for the report's net growth (R7).
 set -u
 
 if [ "${1:-}" = "--self-test" ]; then
-    # Positive control: the checker must be able to FAIL. Build a throwaway repo,
-    # commit one fixture per case, and require the expected exit code for each.
+    # Positive control: one fixture commit per case in a throwaway repo, each with its expected exit code.
     self=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
     tmp=$(mktemp -d) || exit 2
     trap 'rm -rf "$tmp"' EXIT
     cd "$tmp" && git init -q && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m base
     fails=0
-    # A green with zero cases scanned would be vacuous, so every case also
-    # states how many test cases the checker must have SEEN.
+    # Each case also states how many test cases must be seen: a green that scanned none proves nothing.
     expect() {  # expect <exit-code> <cases-seen> <label> <file> <content>
         mkdir -p "$(dirname "$4")"; printf '%s\n' "$5" > "$4"
         git add -A && git -c user.email=t@t -c user.name=t commit -q -m "$3"
@@ -63,13 +59,13 @@ if [ "${1:-}" = "--self-test" ]; then
     expect 0 1 "test.each [...] as const table, traced"   o.test.ts "$(printf "test.each([\n  [1, 2],\n] as const)('B-AC-3: adds %%s', f)")"
     expect 1 1 "test.each [...] as const table, untraced" p.test.ts "$(printf "test.each([\n  [1, 2],\n] as const)('adds %%s', f)")"
     expect 0 1 "test.each table, title on line after ])(" q.test.ts "$(printf "test.each([\n  [1, 2],\n])(\n  'B-AC-3: adds %%s',\n  f)")"
-    # A table the parser cannot close must never swallow the tests after it (a false PASS).
+    # A table the parser cannot close must not swallow the tests after it (a false PASS).
     expect 1 2 "unreadable table does not hide a later untraced test" r.test.ts "$(printf "test.each(\n  makeRows(\n    1,\n  ) satisfies Row[],\n)\n('B-AC-3: adds %%s', f)\nit('renders the page', f)")"
     expect 1 1 "it.each template table, untraced" l.test.ts "$(printf "it.each\`\n  a | b\n  \${1} | \${2}\n\`('adds \$a', f)")"
     expect 0 0 "removing a test is not adding one" b.test.ts ""
     expect 0 0 "non-test file is ignored"        src/x.ts "it('not a test file', f)"
     expect 0 0 "hooks and steps are not cases"   j.test.ts "$(printf "test.describe('x', f)\ntest.beforeEach(f)\nawait test.step('do', f)")"
-    # Deleting a whole test file must count as removals — R7's net growth depends on it.
+    # Deleting a whole test file counts as removals; R7's net growth depends on it.
     git rm -q c.spec.ts && git -c user.email=t@t -c user.name=t commit -q -m "delete a test file"
     if bash "$self" HEAD~1..HEAD | grep -q '0 test case(s) added, 3 removed'; then echo "ok    deleting a file with 3 tests counts 3 removed"
     else echo "WRONG deleting a file with 3 tests did not count 3 removed"; fails=$((fails + 1)); fi
@@ -138,8 +134,8 @@ file == "" { next }
     sign = substr($0, 1, 1); s = substr($0, 2); cur_line = s
     # title of a head seen on the previous line (multi-line call, or .each table)
     if (pend == "each" && sign == pend_sign && js_head(s)) {
-        # A new test began while a table was still open: the title of the table could not be
-        # read. Count it (as untraced) and scan this line normally — never swallow it.
+        # A new test began while a table was still open: count the case of the table as untraced
+        # and scan this line normally, so it is not swallowed.
         record(sign, file, pend_ln, "", pend_prev); pend = ""
     }
     if (pend != "" && sign == pend_sign) {

@@ -1,17 +1,14 @@
 #!/bin/bash
-# reap-ghosts.sh — kill panel/CLI processes belonging to RETIRED sessions.
+# reap-ghosts.sh — kill `claude --resume=<id>` processes of retired sessions.
+# A retired session keeps running after its editor window closes, and can wake and act
+# on its stale plan, forking a lane.
 #
-# Why: a decommissioned session keeps running as a `claude --resume=<id>` process
-# (VS Code panel or elsewhere). Closing the editor window does NOT kill it; it can
-# wake and act on its stale plan, forking a lane. See PROTOCOL §5 Second-Door Rule.
-#
-# Safety: a process is killed ONLY if its session id is absent from the WS map in
-# ws-pulse.py (i.e. not a currently-registered lane). Registered lanes are never touched.
+# A process is killed only if its session id is on no code line of ws-pulse.py (ids in
+# comments don't count). Remap a lane to its successor before running this.
 #
 # Usage:  bash .handover/reap-ghosts.sh          # report only (default, safe)
 #         bash .handover/reap-ghosts.sh --kill   # actually reap
 set -uo pipefail
-# C2: the programme is a parameter, not this script's parent directory.
 source "$(dirname "${BASH_SOURCE[0]}")/program-root.sh"
 program_resolve "${PROGRAM_ROOT:-}" || exit 2
 cd "$PROGRAM_ROOT" || exit 1
@@ -21,14 +18,7 @@ MAP="$PROGRAM_DIR/ws-pulse.py"
 mode="${1:-report}"
 found=0
 
-# PROTECTION IS DECIDED ON CODE LINES ONLY (PM-3, 2026-07-29).
-# The old check was `grep -q "$sid" "$MAP"` against the WHOLE file — but PROTOCOL §4
-# step 2 *instructs* you to "comment the retired id with its date and reason". So every
-# session retired according to protocol stayed matched by its OWN RETIREMENT COMMENT and
-# was reported "registered lane, left alone". The reaper could only ever have killed a
-# session deleted from the map entirely — which protocol tells you not to do. It was
-# never shown a retired-but-commented id; that is the only input it gets in practice.
-# Found live: PM-2 (09d113d4) had been retired, was still running, and was protected.
+# Ids on code lines only: retired rows stay in the map as comments.
 REGISTERED=$(sed 's/#.*//' "$MAP" | grep -oE "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}")
 if [ -z "$REGISTERED" ]; then
   echo "WS map yielded ZERO registered session ids after stripping comments — refusing to run."

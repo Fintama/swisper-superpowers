@@ -30,11 +30,10 @@ Task tool (general-purpose):
     git diff {BASE_SHA}..{HEAD_SHA}
     ```
 
-    🔴 **Stay inside the worktree under review and your own scratch subdirectory.**
-    Never install into or write through shared tool installs (a uv-managed Python,
-    shared venvs, global caches), never delete files you did not create, and never
-    print environment variables. *Measured 2026-10-05: a reviewer printed env
-    tokens into its transcript.*
+    **Stay inside the worktree under review and your own scratch subdirectory.**
+    Don't install into or write through shared tool installs (a uv-managed Python,
+    shared venvs, global caches), don't delete files you did not create, and never
+    print environment variables: they hold live tokens.
 
     ## Code Navigation (use prism for context; git diff for the change)
 
@@ -42,7 +41,7 @@ Task tool (general-purpose):
     understand the surrounding code and to catch cross-repo issues a diff can't show — in a
     Prism-indexed repo (Fintama repos are; `prism ping` confirms) Grep/Glob/Read content
     search is blocked (`prism --help`). High-leverage for THIS review:
-    - **Duplicate functionality (DRY across the WHOLE repo, not just the diff)** — for each new helper / util / service / function the PR adds, `prism check "<what it does>"` and `prism search "<concept>"`. If an equivalent already exists elsewhere, flag as Important and name the existing path: reuse it, don't ship a second implementation. Reimplementing what already exists is a recurring, expensive defect (divergent bugfixes, behavior drift) and a diff alone will never reveal it.
+    - **Duplicate functionality (DRY across the WHOLE repo, not just the diff)** — for each new helper / util / service / function the PR adds, `prism check "<what it does>"` and `prism search "<concept>"`. If an equivalent already exists elsewhere, flag as Important and name the existing path: reuse it, don't ship a second implementation. A diff alone never shows this.
     - **Contract integrity** — for each contract/API this PR produces, `prism find-refs "<Symbol>"` to confirm a CONSUMER actually exercises it (producer-side tests alone don't count). Zero external refs = unconsumed contract → flag.
     - **Layering / architecture** — `prism deps <module>` to check for upward / forbidden cross-layer imports the diff introduces.
     - **Read what you review** — `prism body "<Symbol>"` / `prism def` to read the real implementations the diff calls into ("don't review code you didn't read").
@@ -65,14 +64,14 @@ Task tool (general-purpose):
     - **Every test in the diff names an AC / INV / FM id** (`trace-check.sh` from `test-driven-development`, over BASE..HEAD). Untraced or mechanism-only tests (mock-call counts, constants, source greps, a unit test re-proving a boundary test) are **Important**, disposition *strengthen* or *delete* — never "keep for coverage"
     - TDD evidence: failing-test commit precedes the passing-test commit (visible via `git log -p`). If the diff shows tests added in the same commit as the implementation, OR after, that's a TDD violation — flag as Critical and request the implementer demonstrate the failing-test ran and failed for the right reason.
 
-    **TDD anti-patterns (per `superpowers:test-driven-development/testing-anti-patterns.md`):**
+    **TDD anti-patterns (per `test-driven-development/testing-anti-patterns.md`):**
     - Mock-as-SUT: an assertion checks the mock instead of real behavior — flag.
     - Test-only methods on production classes — flag.
     - Shared global state between tests; tests that depend on execution order — flag.
     - Retry-on-flake config (`retries: N`, `retryTimes`, `sleep()` to hide a race) — flag as Critical.
     - Test-only env vars branching production code (`if (process.env.NODE_ENV === 'test') ...`) — flag as Critical.
     - Frontend unit test labeled as B-AC verification without a corresponding Playwright front-to-back E2E — flag as Critical.
-    - New `// @ts-ignore` / `// eslint-disable` / `as any` introduced to make the test machinery work — flag.
+    - New `// @ts-ignore` / `// eslint-disable` / `as any` introduced to make the test machinery work without a reason on the same line — flag.
 
     **Contract integrity (when the spec defines contracts in §9-style sections):**
     - Every contract this PR produces is exercised by at least one test from a CONSUMER (or test fixture acting as consumer) — not just isolated producer-side unit tests. "Producer's own unit test passes" is not sufficient for contract validation.
@@ -81,10 +80,11 @@ Task tool (general-purpose):
 
     **Code quality:**
     - Clean separation of concerns?
-    - Proper error handling? Failure modes catalogued for public functions where the project requires it?
-    - Type safety where applicable? **No new `// @ts-ignore`, `// eslint-disable`, `as any`, or `as unknown as` in the diff** unless the diff explicitly justifies why with a comment AND the project's quality bar permits it.
+    - Proper error handling for the failure modes the spec documents?
+    - Type safety where applicable? A new `// @ts-ignore`, `// eslint-disable`, `as any` or `as unknown as` needs its reason on the same line and must be allowed by the project's rules; flag one without.
     - DRY without premature abstraction? **No reimplementation of functionality that already exists elsewhere in the repo** — verify with `prism check`/`prism search` (see Code Navigation). Flag duplicates with the path of the existing equivalent.
     - Edge cases handled?
+    - Comments and docstrings in the diff follow `test-driven-development/clean-code.md` (the maintainability reviewer checks them in detail).
 
     **Architecture:**
     - Sound design decisions?
@@ -93,7 +93,7 @@ Task tool (general-purpose):
     - Integrates cleanly with surrounding code? Layering respected (no upward dependencies that violate the architecture)?
 
     **Design fitness — judged against CODE, where the evidence exists:**
-    These checks used to run at spec time, against prose. Prose evidence is a prediction; a diff is a fact. Flag only with cited `file:line` evidence and a named cost — never "it might grow".
+    A diff is evidence a spec could only predict. Flag only with cited `file:line` evidence and a named cost, not "it might grow".
     - **Principle violations** — DIP (domain importing infrastructure), OCP, LSP, ISP, SRP. Name the principle, quote the offending line, state the fix in one sentence.
     - **Anti-patterns, each needing counted evidence:** speculative interface (one implementation, no second in sight); premature distribution (a service or network hop where an in-process module would do); stringly-typed dispatch (an `if type == "X" elif ...` chain where an enum plus dispatch table belongs); anemic data class plus behaviour orchestrator; god class (one component owning 4+ unrelated concerns); leaky abstraction (vendor types — JSONB, Stripe webhook shapes — visible in domain code).
     - **Testability, functional core / imperative shell:** if a unit test has to mock 2+ collaborators to exercise a single rule, the rule is in the wrong layer. Is I/O (DB, HTTP, time, randomness, env) separated from rule evaluation, or interleaved?
@@ -105,19 +105,20 @@ Task tool (general-purpose):
     - Net test growth explained — and lower tests a new higher one covers are deleted in this PR?
     - All tests passing?
     - **If frontend was touched** (any UI / page / route / asset file in the diff): a Playwright (or equivalent E2E) test exists that drives the browser AND asserts the back-end effect. Frontend unit tests against a mocked backend do NOT satisfy this — flag as Critical if missing.
-    - Property-based tests for invariants where the project's quality bar requires them (e.g., Polis-bar I1–I5)?
+    - A property test for each invariant the plan lists?
 
     **Production readiness:**
     - Migration strategy if schema changed?
     - Backward compatibility considered?
     - Documentation complete? README / ARCHITECTURE / CONTRIBUTING / CHANGELOG updated where the project's quality bar requires?
-    - Non-obvious decision recorded (architecture page "Why it is like this" block where the project has an architecture site; otherwise an ADR under the project's ADR directory)?
+    - Where the project has an architecture site: a design decision a later reader would otherwise reverse is recorded in the "Why it is like this" block of the page it shaped (there are no ADRs)?
     - No obvious bugs?
 
     ## Calibration
 
-    Categorize issues by actual severity. Not everything is Critical.
-    Acknowledge what was done well before listing issues — accurate praise
+    Categorize issues by actual severity; not everything is Critical. The
+    maintainability reviewer uses the same scale.
+    Acknowledge what was done well before listing issues: accurate praise
     helps the implementer trust the rest of the feedback.
 
     If you find significant deviations from the plan, flag them specifically
@@ -132,13 +133,13 @@ Task tool (general-purpose):
 
     ### Issues
 
-    #### Critical (Must Fix)
+    #### Critical (Blocks Merge)
     [Bugs, security issues, data loss risks, broken functionality]
 
-    #### Important (Should Fix)
+    #### Important (Fix Before Proceeding)
     [Architecture problems, missing features, poor error handling, test gaps]
 
-    #### Minor (Nice to Have)
+    #### Minor (Follow-up)
     [Code style, optimization opportunities, documentation polish]
 
     For each issue:
@@ -156,21 +157,8 @@ Task tool (general-purpose):
 
     **Reasoning:** [1-2 sentence technical assessment]
 
-    ## Critical Rules
-
-    **DO:**
-    - Categorize by actual severity
-    - Be specific (file:line, not vague)
-    - Explain WHY each issue matters
-    - Acknowledge strengths
-    - Give a clear verdict
-
-    **DON'T:**
-    - Say "looks good" without checking
-    - Mark nitpicks as Critical
-    - Give feedback on code you didn't actually read
-    - Be vague ("improve error handling")
-    - Avoid giving a clear verdict
+    Don't say "looks good" without checking, and don't be vague ("improve
+    error handling"): every issue names its file:line and the fix.
 ```
 
 **Placeholders:**

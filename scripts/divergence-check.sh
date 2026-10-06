@@ -1,18 +1,12 @@
 #!/usr/bin/env bash
-# A7 — has a local enhancement disappeared?
-#
-# This fork tracks upstream `superpowers`. A merge can silently drop one of our
-# additions, and nothing about a clean merge says so. DIVERGENCE.md is the ledger;
-# this reads it and fails, NAMING the enhancement, when a marker is gone.
+# Has a local enhancement disappeared? Reads DIVERGENCE.md and fails, naming the
+# enhancement, when a marker is missing from its skill (an upstream merge can drop one silently).
 #
 #   exit 0  every marker still present
 #   exit 1  a marker is missing, or the ledger is empty/unparseable
 #   exit 2  the checker could not run
 #
-# 🔴 IT FAILS ON AN EMPTY LEDGER, AND THAT IS THE POINT. A predicate over an empty
-# set is vacuously true: a checker handed an unparsed ledger would loop zero times,
-# find zero problems and report success — a green byte-identical to a real one. So
-# it prints how many markers it scanned and refuses to pass on zero.
+# It prints how many markers it scanned and fails on zero, so an unparsed ledger is not a pass.
 set -u
 cd "$(dirname "$0")/.." || exit 2
 
@@ -22,8 +16,7 @@ LEDGER=${1:-DIVERGENCE.md}
 scanned=0
 missing=0
 
-# backtick as the field separator: markers contain apostrophes and commas, which a
-# whitespace or comma split would tear apart.
+# Backtick as the field separator: markers contain apostrophes and commas.
 while IFS=$'\t' read -r skill marker; do
     [ -z "${skill:-}" ] && continue
     [ -z "${marker:-}" ] && continue
@@ -39,27 +32,9 @@ while IFS=$'\t' read -r skill marker; do
         missing=$((missing + 1))
         continue
     fi
-    # 🔴 A MARKER THAT NAMES A FILE MUST ALSO FIND THE FILE.
-    #
-    # Measured 2026-08-29: two markers were added naming shipped scripts
-    # (`init-workspace.sh`, `verify-review-loop.mjs`). Both passed on the SKILL.md
-    # grep alone — and would have kept passing if a merge deleted the scripts and
-    # left the prose, because the prose is what mentions them. That is this
-    # ledger's own stated failure mode: a check that "lies in the safe-looking
-    # direction". A skill whose tooling is gone but whose instructions still tell
-    # an agent to run it is worse than one that never had it.
-    # 🔴 SEARCH BY BASENAME, ANYWHERE IN THE FORK — NEVER `skills/$skill/$marker`.
-    #
-    # The flat-path version was written first and produced THREE FALSE FAILURES
-    # on its first run: `plan-check.sh` lives in `skills/writing-plans/scripts/`,
-    # `init-programme.sh` at the repo root, and `render-gate.mjs` is named by
-    # `subagent-driven-development` but shipped under `creating-screen-mocks/`.
-    # Tooling is routinely referenced from a skill that does not host it, and a
-    # check that cries wolf trains everyone to ignore it — the same false-red
-    # failure this fork warns about elsewhere, committed one file later.
-    # `.md` joined the list 2026-10-04: `update-documentation` sends the agent to
-    # `page-standard.md` before any edit, and a merge that dropped the reference file
-    # but kept the prose would leave the instruction pointing at nothing.
+    # A marker that names a file must also find the file, or a merge that deleted a
+    # script but kept the prose naming it would pass. Search by basename anywhere in the
+    # fork: tooling often ships in a different skill (or the repo root) than the one naming it.
     case "$marker" in
         *.sh|*.mjs|*.js|*.ts|*.py|*.md)
             if [ -z "$(/usr/bin/find . -name "$marker" -not -path './.git/*' -print -quit)" ]; then
@@ -68,10 +43,8 @@ while IFS=$'\t' read -r skill marker; do
             fi
             ;;
     esac
-# The row shape is EXACT: `| \`skill\` | \`marker\` | prose |`. Requiring field 3 to be
-# exactly " | " is what keeps prose tables out — an NF>=5 test also matched the
-# "rows deliberately NOT in this table" section, whose cells contain backticked
-# filenames, and silently invented two skills that never existed.
+# Only rows shaped exactly `| \`skill\` | \`marker\` | prose |` count; field 3 must be " | ",
+# which keeps tables whose prose cells hold backticked names from being read as rows.
 done < <(awk -F'`' '/^\| `/ && $3 == " | " { print $2 "\t" $4 }' "$LEDGER")
 
 echo "divergence-check: scanned $scanned marker(s) from $LEDGER"

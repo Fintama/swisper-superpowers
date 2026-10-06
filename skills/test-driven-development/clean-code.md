@@ -1,143 +1,100 @@
-# Clean code and comments
+# Writing comments
 
-**Read before REFACTOR, and before you write any docstring or comment.**
+**Read before REFACTOR, and before you write a docstring or comment.**
 
-Code says *how*. A docstring says *what*: the contract. A comment says *why*,
-and only when the code cannot. Everything else has a better home, where it can't
-go stale inside the code.
+The code says *how*. A name says *what*. A comment is for the one thing the code
+cannot say: a trap, or a reason a careful reader would otherwise get wrong.
 
-## Where each kind of information belongs
+## The test
+
+Before you keep a comment, imagine deleting it. **Would a competent reader then make
+a mistake?** If not, delete it. If yes, keep it, and put it at the line it concerns.
+
+## The default
+
+- **Docstring: one line.** What it does or returns. Add a line for an error it
+  raises or a side effect the signature hides. A private helper whose name and types
+  say it needs none.
+- **Module docstring: one to three lines.** What the module is for.
+- **Comment: one line, at the line it protects.** `# Don't send "": some gateways read it as an empty answer.`
+- A file reads as code with a few notes. If comments approach a fifth of a file,
+  take that as a warning sign: usually the code is unclear (fix the names) or the
+  text belongs somewhere else. Sometimes it is right; then say why (see Checks).
+
+## When a longer comment is right
+
+Some things the reader needs and the code can't show. Then write as much as it takes,
+**once, at the point, in plain words**:
+
+- a vendor or protocol quirk (the API sends usage in two halves; a later value replaces, never adds)
+- a security or data-safety reason a refactor could break (why a value is never echoed in an error)
+- a workaround for a bug elsewhere, with its link
+- a non-obvious algorithm, a regex, a measured performance choice
+- a public API that other teams call (an SDK): arguments, return, errors, an example
+
+Even then: no history, and it must still be true after the next PR.
+
+## Where everything else goes
 
 | Information | Home |
 |---|---|
-| **What** it does: inputs, outputs, errors raised | Docstring, short |
-| **Why** something non-obvious is done this way | Comment, at the line it concerns |
-| **How** it works | The code itself: names, structure |
-| **History**: who decided, which PR, what was refused | Git commit and PR description |
-| **Design rationale** across modules | Architecture page, "Why it is like this" |
-| **Rules that must never break** | Tests, because a test fails when someone breaks the rule and a comment can't |
-| Follow-up work, known debt | The backlog (Jira), not a "PR-n will…" comment |
+| History: which PR, who decided, what was rejected | commit message, PR description |
+| Design reasoning across modules | the architecture page's "Why it is like this" |
+| A rule that must never break | a test (it fails when broken; a comment can't) |
+| Follow-up work | the backlog ticket; in code at most `TODO(SA-123): …` |
+| Spec and AC ids | test titles; in code at most a trailing reference (`See spec C-4.`, `See B-AC-3.`) |
 
-## 🔴 Do not match the comment style around you
+## Keep out of code
 
-Most heavily commented code was written by agents copying the code next to it.
-**When the surrounding file breaks these rules, your new and changed lines follow
-this file, not the neighbours.** Your harness may tell you to match the
-surrounding comment density. For comments, this file overrides that.
+Stable error and log codes (`COUPON_EXPIRED`) are code, not comments, and are fine.
+Keep out: line-number citations (`file.py:951`, they drift) · alarm markers (🔴, ⚠️, CAPITALS) ·
+internal ids in error messages an operator reads · arguments with a reviewer
+("intended", "not this function's fault") · re-statements of the code · commented-out code.
 
-Do not rewrite untouched comments elsewhere in the file (minimal change), unless
-the task is a cleanup. **Do** fix the docstring of any function you change.
+Tests follow the same guide: the test title carries the id and the promise, so the
+body rarely needs a comment.
 
-## Docstrings: the contract
+## When a reviewer asks for a comment
 
-- Start with **one line** that says what it does or returns. Usually that is enough.
-- Add more only for what a caller needs and the signature can't show: a
-  non-obvious argument, a unit, an error it raises, a side effect.
-- **About 1–5 lines.** If you need more, the function probably does too much.
-- Private helpers with a clear name and types often need no docstring at all.
+"Add a comment explaining X" is usually answered better by a clearer name, a smaller
+function, or a test. Add the comment only if it is a *why* the code cannot show.
 
-## Comments: the why
+## Don't copy the file next to you
 
-Write a comment only when a careful reader would get it wrong without it:
-
-- a **hazard**: "Don't default these to 0: absence and zero must stay different."
-- a **non-obvious reason**: "Built once: TypeAdapter compiles its validator on construction."
-- an **external constraint**: "The vendor sends usage in two halves; a later value replaces, never adds."
-
-## Never in code
-
-| Pattern | Instead |
-|---|---|
-| History: `PR-6a`, "was proposed and refused", review ruling ids, dates, reviewer names | Commit message and PR description |
-| A spec, AC or review id used as the explanation (`C-4`, `HC-7`, `AM-12`) | Say the rule in plain words. A trailing reference (`See spec C-4.`) is allowed, at most once per symbol. **AC ids live in test titles** (R2), not in production comments |
-| Internal ids in **error messages or log text** an operator reads | Plain words: what is wrong, which node or field, what is allowed |
-| Line-number citations (`openai_compat.py:951`) | `path::Symbol`, or nothing. Line numbers drift with the next edit |
-| Re-stating the code ("returns provider, else wire" above code that does exactly that) | Delete it, or make the name say it |
-| Alarm markers: 🔴, ⚠️, **bold capitals**, "CRITICAL" | Plain sentences. When everything is red, nothing is |
-| Defending against a reviewer ("intended by…", "this loss is the other type's, not this function's") | Write for the next developer, not the last reviewer |
-| Measurements and narratives ("Measured 2026-09-14: …", "SPIKE §9 found…") | PR description or architecture page. State the resulting rule in one line if the code needs it |
-| "Temporary", "PR-n performs the swap", "until X lands" | A backlog ticket. If you must mark it in code, `TODO(SA-123): …` |
-| Commented-out code | Delete it. Git has it |
-
-## Clean code beyond comments
-
-The `senior-engineer pass` (implementer prompt) decides the design. These are
-the line-level rules:
-
-- **Names carry the meaning.** If a comment explains what a variable or function
-  is, rename it instead and delete the comment.
-- **One function, one job.** If you'd write "and" in its one-line docstring, split it.
-- **Guard clauses over nesting.** Handle the refusal or empty case first and return.
-- **Named constants** for magic numbers: `RETRY_LIMIT = 3`, not `3  # retry limit`.
-- **Error messages are documentation that reaches the person with the problem:**
-  name the thing, the bad value, and what would be accepted.
-- **No dead code**, no unused parameters, no "just in case" branches.
+Most over-commented code got that way by imitation. If the surrounding file breaks this
+guide, your new and changed lines follow the guide, not the neighbours. Your harness may
+say "match the surrounding comment density"; for comments, this guide wins. Fix the
+docstring of any function you change; leave untouched code alone unless the task is a cleanup.
 
 ## Example
 
-The "before" is what an implementer wrote when given a spec with ids, a review
-ruling, and a heavily commented file next to it:
-
 ```python
-# ❌ before: 32 lines of documentation for 14 lines of code
-def select_wire(row: dict[str, Any], registry: dict[str, object]) -> tuple[str, object]:
-    """The wire name and instance a resolved generation row states.
+# Before
+def _messages_to_wire(messages: list[Message]) -> list[dict[str, Any]]:
+    """`llm_adapter.types.Message` -> the chat-completions message vocabulary.
 
-    🔴 **C-4 / HC-3: refuse, never substitute.** A row with no `wire` is refused;
-    a row naming a wire *registry* does not hold is refused. Its `provider` or
-    route NAME never chooses a wire, and no registered wire stands in for an
-    unregistered one (AM-12).
+    The pipeline accepts plain JSON only, and this layer is the one that knows
+    what a `Message` is. `content: None` on an assistant turn with tool calls is
+    deliberate: such a turn has no text, and sending `""` makes some gateways
+    treat it as an empty answer.
     """
     ...
-        raise RowMisconfigured(
-            f"node {node!r} states wire {stated!r}, which this runtime does not "
-            f"register. Registered wires: {sorted(registry)}. A stated wire is "
-            f"never substituted by another (AM-12)."
-        )
-```
+            if not message.content:
+                item["content"] = None
 
-```python
-# ✅ after
-def select_wire(row: dict[str, Any], registry: dict[str, object]) -> tuple[str, object]:
-    """Return the wire the row names, as `(name, wire)`.
-
-    Raises RowMisconfigured if the row names no wire or one that is not
-    registered. There is deliberately no fallback: a substitute wire would send
-    one vendor's request format to another vendor's host.
-    """
+# After: the trap moved to the line it protects; the rest was restatement
+def _messages_to_wire(messages: list[Message]) -> list[dict[str, Any]]:
+    """`Message`s as chat-completions dicts."""
     ...
-        raise RowMisconfigured(
-            f"node {node!r} names wire {stated!r}, which is not registered. "
-            f"Registered wires: {sorted(registry)}."
-        )
+            # Don't send "": some gateways read it as an empty answer.
+            if not message.content:
+                item["content"] = None
 ```
 
-The ruling's *reason* stays, in one sentence. Its *history* (PR-6a, AM-12, the
-date) goes in the PR description. Its *enforcement* is the T-AC test that fails
-if a fallback comes back.
+## Checks
 
-## Mechanical checks
-
-If the project has a comment lint, run it before you commit. In helvetiq,
-`cd apps/backend && python -m scripts.lint.citations --whole-scope` enforces
-docstring length and bans spec, PR, review and line-number references in the
-model layer. A lint cannot judge alarm markers, re-stated code or arguments
-with a reviewer. Those are the self-check below.
-
-## Self-check before you commit
-
-For each docstring or comment you added or changed:
-
-1. Does the code (names, types, structure) already say this? → delete it.
-2. Is it for the **next developer** or the **last reviewer**? → only the first stays.
-3. Will it still be true after the next PR? History, plans and line numbers won't be.
-4. Could a newcomer understand it **without the spec open**?
-5. Is it a rule that must never break? → it needs a test. The comment is optional.
-
-## Red flags
-
-- Your docstring is longer than the function body
-- It contains a PR number, a date, a reviewer's ruling, or "was refused"
-- It contains 🔴, ⚠️ or a sentence in bold capitals
-- An error message cites a spec id
-- You are copying the comment style of the file next to you
+If the project has a comment lint, run it (helvetiq: `cd apps/backend && python -m
+scripts.lint.citations --whole-scope`). A lint catches ids, line numbers and length;
+only you can apply the test above. Its limits are defaults: when a longer docstring or
+a comment-heavy file is genuinely right, put `# comment-ok: <reason>` above it. The
+reason is printed in CI, so a reviewer sees and judges it.

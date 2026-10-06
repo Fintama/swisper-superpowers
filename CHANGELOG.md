@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-07
+
+Every skill re-read for contradictions, outdated steps and length (Heiko, 2026-10-07: "as concise,
+short and clear as possible, but as long as necessary"; no hard length limits; rules are a default
+plus a named exception). Audit: Swisper_Documentation `explainers/programme/2026-10-07-skills-audit.md`.
+Skill markdown 103,055 → 62,574 words; 🔴 141 → 2 and "Measured 20…" 36 → 1, the remaining
+mentions being the rules that forbid them.
+
+### Changed
+- **Comments** (`test-driven-development/clean-code.md`): rewritten around one test (delete it; would
+  a competent reader then make a mistake?), a section on when a longer comment is right, and a
+  `# comment-ok: <reason>` escape for a project's comment lint. It is the one home; the other skills
+  point to it. receiving-code-review: answer "add a comment explaining X" with a name or a test first.
+- **Contradictions fixed** (about 40), e.g. the plan review gate CLAUDE.md removed (writing-plans
+  section, `plan-document-reviewer-prompt.md`, both `review-termination.md` deleted, its two
+  unowned checks moved into the self-review); "merges to main are yours" → the human approves each;
+  handovers saved with `docs-save`, not committed by hand; one rule for "verified" (fresh evidence for
+  this commit, scoped run or CI); full suite is CI's job everywhere; one severity scale
+  (Critical / Important / Minor); TDD test naming in debugging; inbox read at every step boundary.
+- **Outdated removed:** the `superpowers:` prefix (59×), ADRs/TDRs, the docs submodule, Polis/bun
+  specifics, Foundry-only lines in general skills, a NUL byte in systematic-debugging, dangling files.
+- **Hard rules → defaults with a named exception** for style and process (TDD's "delete means
+  delete", brainstorming for a config change, goal and lane counts, "two mocks", "it depends").
+  Safety rails stay absolute: secrets, prod, main merges, dirty worktrees, live lanes.
+- **Shorter, no content lost:** each editor inventoried every behaviour-changing rule before
+  editing and accounted for each after (kept / merged / softened / removed as outdated or duplicate).
+  brainstorming 10,090 → 5,079 words, writing-plans 9,172 → 5,295, SDD 7,972 → 5,267,
+  using-superpowers 787 → 360 (behaviour-tested on four prompts).
+- **writing-skills:** no word targets; skills hold the rule plus one clause of reason, evidence goes
+  to CHANGELOG/DIVERGENCE; mechanical edits exempt from the baseline test; a "Ship the edit" step.
+- **Scripts:** comments to the clean-code style; `update-program-board` JS and checker moved into
+  `board.js` / `check-board.py`; init-workspace placeholder and next-step path fixed.
+
+### Removed
+- `writing-skills/anthropic-best-practices.md` (now a link + five points), `persuasion-principles.md`,
+  `examples/CLAUDE_MD_TESTING.md`, `hooks/hooks-cursor.json`, the stray duplicate CHANGELOG block.
+- `BASELINE-*.md` test evidence → Swisper_Documentation `archive/skills-evidence/`.
+
 ## [1.10.0] - 2026-10-07
 
 ### Added
@@ -360,25 +398,6 @@ publishes everything it has ever contained, not only its current tip.
   positive-controlled in both directions.
 - This repository has **no CI**. The divergence check and skill validation are
   the gate, run by hand.
-
-## [Unreleased]
-
-## [1.8.0] - 2026-10-05
-
-## [1.7.0] - 2026-10-05
-
-### Added
-
-- **The repo is now an installable Claude Code plugin, and its own marketplace**
-  (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`). Install with
-  `/plugin marketplace add Fintama/swisper-superpowers` then
-  `/plugin install swisper-superpowers@swisper-superpowers`.
-  ⚠ **The existing `scripts/setup-user-level.sh` symlink install is unchanged and
-  still supported** — the plugin is a third install path, not a replacement. The
-  two coexist; `~/.claude/skills` keeps resolving to your clone.
-  ⚠ **Installing the plugin does NOT edit `~/.claude/settings.json`.**
-  `setup-user-level.sh` still does, deliberately — that merge is what turns off the
-  14 stock plugin skills so these versions take precedence.
 
 ## [0.4.0] — 2026-05-25
 

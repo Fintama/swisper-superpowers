@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Stall check — find lanes that are SILENT while claiming to be working.
+"""Stall check: find lanes that are silent while supposedly working.
 
-The delta pulse reports what CHANGED. A stalled lane changes nothing, so it is
-invisible there: exactly how WS5 sat waiting for a fix agent that had already
-finished (2026-07-27) until Heiko asked. This script reports the absence.
-
-A lane is flagged when its transcript has not moved for longer than the threshold.
-The PM then messages that lane: "your subagents may have finished — check, do not wait."
+The delta pulse reports what changed, so a stalled lane is invisible there. A lane is
+flagged when its transcript has not moved for longer than the threshold; the PM then
+tells it: "your subagents may have finished — check, do not wait."
 
 Usage: python3 .handover/stall-check.py [minutes, default 15]
 """
@@ -17,14 +14,8 @@ _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
 from program_root import program_dir as _pd, program_root as _pr, program_transcripts as _pt
 ROOT = _pd()
 
-# ── Measure the MAIL, not the envelope (PM ruling, 2026-08-27) ───────────────
-# The threshold below uses tail length as a proxy for "there is real content
-# waiting". C1 gave every message a `· session … · seq …` envelope — +25 bytes
-# each — which is framing, not content, and it pushed lanes over the line sooner.
-#
-# 🔴 The fix is NOT to raise 200. A constant tuned to today's field count rots
-# silently the next time the envelope changes, and nothing announces the rot.
-# Strip the framing, then measure what is left.
+# The 200-byte "mail is waiting" threshold measures message text, with the mirror
+# headers stripped; don't tune the number to the header size instead.
 _ENVELOPE = _re_env = None
 def _mail_only(text):
     """Drop mirror headers, keep the messages. Framing is not content."""
@@ -34,27 +25,17 @@ def _mail_only(text):
         # a mirror header: "## <ts> — <sender> message (delivered via <channel>)…"
         _re_env = _re.compile(r'^##\s.*?\smessage\s\(delivered via[^\n]*$', _re.M)
     return _re_env.sub('', text)
-          # C2: was dirname(__file__)
-PROJ = _pt()          # C2/HC-2: was a hard-coded, USER-specific absolute path.
-                      # On anyone else's machine it named a directory that does not
-                      # exist, so every lane read as "no transcript" and the check
-                      # reported clean while being incapable of reporting anything else.
+PROJ = _pt()
 threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 15.0
 
-# Strip comments BEFORE matching: the protocol tells the PM to comment a retired
-# row rather than delete it, so an uncommented parse counts retired sessions as
-# live. reap-ghosts.sh has always done this; this file did not.
+# Strip comments before matching: retired rows are commented out, not deleted.
 src = re.sub(r"#.*", "", open(os.path.join(ROOT, "ws-pulse.py")).read())
 lanes = re.findall(r'\("(WS\d-\d[^"]*)",\s*"([a-f0-9-]{36})",\s*"([^"]*)"\)', src)
 
-# ── HOLD GATES (WS2-8, 2026-07-29) ─────────────────────────────────────────
-# The heuristic could not tell STOPPED-BECAUSE-TOLD-TO from STOPPED-BECAUSE-BROKEN.
-# A lane holding correctly at a PM gate produces a transcript trace identical to a
-# dead one — so the lanes flagged most often were the ones obeying most exactly, and
-# several wake-ups were spent chasing lanes doing precisely what they were told.
-# A gate is one line in .handover/hold-gates.txt:  WS<n> <what it waits on>
-# Remove the line when you clear the gate; a stale gate hides a real stall, so the
-# report prints open gates even when nothing is flagged.
+# Hold gates: a lane waiting at a PM gate looks exactly like a dead one, so it is listed
+# as held, not stalled. One line per gate in .handover/hold-gates.txt: WS<n> <what it waits on>
+# Remove the line when you clear the gate; a stale gate hides a real stall, so open gates
+# are always printed.
 gates = {}
 gp = os.path.join(ROOT, "hold-gates.txt")
 if os.path.exists(gp):
@@ -99,20 +80,13 @@ for name, sid, wt in lanes:
     if quiet >= threshold:
         if lane_id in gates:
             held.append((name, gates[lane_id], quiet)); continue
-        # A PANEL lane with queued mail is already reported in its own section with a
-        # known cause; flagging it a second time as a stall makes the PM chase a lane
-        # it has just explained to itself. Same principle as the hold-gate skip.
+        # Already reported, with its cause, in the panel-lane section.
         if lane_id in _panel_lane_ids:
             continue
         pane = subprocess.run(["tmux", "capture-pane", "-t", "ws" + name[2], "-p"],
                               capture_output=True, text=True).stdout
-        # BLOCKED ON A PERMISSION PROMPT (PM-3, 2026-07-29). A lane awaiting an
-        # interactive approval cannot emit a token, so its transcript freezes and it
-        # is INDISTINGUISHABLE from a stall to both instruments — the delta pulse sees
-        # nothing change (nothing IS changing) and this check saw only "0 subagent
-        # rows". WS1 sat 28 minutes behind a read-only `docker context ls` prompt, with
-        # its rebase agent blocked behind it. Only the PM can clear it, and only if the
-        # PM knows. Detect it explicitly rather than hoping someone reads the pane.
+        # A lane waiting on a permission prompt emits nothing and looks stalled; only
+        # the PM can clear it, so it is detected from the pane and reported separately.
         if re.search(r"Do you want to proceed\?|requires approval|don.t ask again for", pane):
             cmd = ""
             m = re.search(r"^\s*(cd .+|\S.*)$", pane[max(0, pane.find("Bash command")):], re.M)
@@ -121,13 +95,9 @@ for name, sid, wt in lanes:
         agents = len(re.findall(r"^\s*◯", pane, re.M))
         flagged.append((name, f"{agents} subagent rows in pane", quiet))
 
-# ── PANEL LANES WITH UNDRAINED MAIL (PM-3, 2026-07-29) ─────────────────────
-# When a lane loses its tmux seat and becomes a VS Code panel process, msg.py
-# correctly switches it to "panel (polled)" — but hosted lanes were told to
-# install NO poll cron, so nothing polls and PM messages queue to a file forever.
-# The lane stays healthy and the BUS goes one-way, silently: no error, no warning,
-# and the delta pulse cannot see it because a lane that is working is not stalled.
-# WS2 sat like this for 2+ hours; WS1 followed. Detect the combination explicitly.
+# ── Panel lanes with undrained mail ─────────────────────────────────────────
+# A lane that lost its tmux seat gets PM messages in its inbox file only, and a lane
+# without a poll never reads them: the lane looks healthy while the bus is one-way.
 panel_starved = []
 try:
     import subprocess as _sp

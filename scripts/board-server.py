@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
-"""Mission Control server — serves the board and takes Heiko's clicks.
+"""Mission Control server: serves the board and takes the human's clicks.
 
-Three endpoints:
   GET  /            static board files
-  POST /decide      {id, answer, note} -> appends to .handover/outbox-to-pm.md,
-                    which is exactly where the PM already looks. A click therefore
-                    reaches the PM through the channel that already exists.
-  GET  /state       {answers, acks} -> lets the page show what has ALREADY been
-                    answered (so a reload does not lose it) and whether the PM has
-                    ACTED on it, with what they did.
+  POST /decide      {id, answer, note} -> appends to .handover/outbox-to-pm.md, where the PM looks
+  GET  /state       {answers, acks} -> what is already answered and what the PM did about it,
+                    so a reload keeps answers and the sender can tell "seen" from "lost"
 
-🔴 /state and the Monitor watch are not optional polish. Added 2026-08-30 after Heiko
-clicked three decisions, could not tell whether they had been seen, and had to ask —
-"otherwise the board is only half useful." A channel needs a return path, or the
-sender cannot distinguish "delivered" from "broken". See update-program-board.
-
-⚠ POSTING IS ONLY HALF THE MECHANISM. Whoever starts this server must, in the same
-turn, arm a watch on the outbox so a click WAKES the PM rather than waiting to be
-noticed:
+Whoever starts this server arms a watch on the outbox in the same turn, so a click wakes
+the PM instead of waiting to be noticed:
 
     Monitor(command: 'tail -n 0 -f <root>/.handover/outbox-to-pm.md '
                      '| grep --line-buffered "via board"',
@@ -49,9 +39,8 @@ BOARD = f"{H}/board" if os.path.isdir(f"{H}/board") else _LEGACY
 # Written by the PM AFTER acting: {"<decision id>": {"at": "...", "did": "<what happened>"}}
 ACKS = f"{BOARD}/acks.json"
 
-# ⚠ Ports are GLOBAL TO THE MACHINE, not per-programme. Read board.port from
-# program.yaml where present — two programmes on one laptop will otherwise collide,
-# and the second one to start simply fails to bind.
+# Ports are global to the machine: take board.port from program.yaml, or a second
+# programme on the same laptop fails to bind.
 PORT = 8794
 try:
     import yaml  # noqa: F401  (PyYAML is a documented prerequisite)
