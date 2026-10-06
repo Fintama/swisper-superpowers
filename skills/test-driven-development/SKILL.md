@@ -189,6 +189,8 @@ The simplest code that makes the test pass. Don't add features, refactor other c
 
 After green only: remove duplication, improve names, extract pure logic out of the shell. Keep tests green. Don't add behaviour.
 
+Then check every docstring and comment you added against [`clean-code.md`](clean-code.md): a docstring states the contract, a comment states a non-obvious *why*, and history, spec ids, line numbers and alarm markers stay out of the code. **Do not copy the comment style of the file around you** — most over-commented code got that way by imitation.
+
 ## Functional Core, Imperative Shell — design for testability
 
 **This is the design that makes TDD viable.** If you are fighting to test something, the architecture is wrong, not the test.
@@ -312,6 +314,7 @@ Which tool per language (Vitest, Playwright, pytest, fast-check, Stryker, Pact, 
 - [ ] Every documented failure mode has one boundary test; every listed invariant a property test
 - [ ] Frontend touched → real-browser front-to-back test for the business AC
 - [ ] No shared state, no `skip`/`only`/`sleep`/retries, no new `@ts-ignore` / `as any` / `eslint-disable`
+- [ ] Every docstring and comment I added passes the `clean-code.md` self-check: contract or why only; no PR/review history, spec ids as explanation, line numbers, 🔴/⚠️
 - [ ] Output pristine
 
 Can't check all boxes? You skipped TDD. Start over.
@@ -345,6 +348,7 @@ No exceptions without your human partner's permission.
 - [`testing-anti-patterns.md`](testing-anti-patterns.md) — mocks, test-only production code, shared state, retries, the untraced unit test.
 - [`toolchain-matrix.md`](toolchain-matrix.md) — tools per language, pipeline stages, contract and mutation testing.
 - `trace-check.sh` — R8, the mechanical R2 check.
+- [`clean-code.md`](clean-code.md) — **read before REFACTOR.** Where each kind of information belongs (docstring, comment, code, git, architecture page, test), what never goes in code, and why not to match an over-commented neighbour.
 
 ## Integration with other skills
 

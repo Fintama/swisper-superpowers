@@ -21,6 +21,7 @@ Task tool (general-purpose):
 - Are units decomposed so they can be understood and tested independently?
 - Is the implementation following the file structure from the plan?
 - Did this implementation create new files that are already large, or significantly grow existing files? (Don't flag pre-existing file sizes — focus on what this change contributed.)
+- **Comments follow `test-driven-development/clean-code.md`?** Docstring = contract, comment = non-obvious why. History, spec ids as explanation, line numbers, 🔴/⚠️ and internal ids in error messages are Minor findings each — Important when they dominate a file the task added.
 - **Did it reimplement something that already exists?** For each new helper / util / service the change adds, confirm there isn't an existing equivalent it should have reused.
 
 **Tests — check the list, not the count** (`test-driven-development` R1–R7):

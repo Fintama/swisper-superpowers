@@ -320,6 +320,11 @@ Task tool (general-purpose):
     - Is this my best work?
     - Are names clear and accurate (match what things do, not how they work)?
     - Is the code clean and maintainable?
+    - **Comments (`test-driven-development/clean-code.md`):** every docstring I added
+      states the contract in ~1–5 lines; every comment states a non-obvious *why*.
+      No PR or review history, no spec/AC id as the explanation (AC ids go in test
+      titles), no line-number citations, no 🔴/⚠️, no internal ids in error messages.
+      **I did not copy the comment style of the surrounding file** if it breaks these rules.
 
     **Discipline:**
     - **Does the code match my senior-engineer pass?** No J line in the diff anyway; every S line true of the diff. If the pass turned out wrong, correct it in the report.

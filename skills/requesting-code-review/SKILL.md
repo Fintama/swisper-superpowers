@@ -56,7 +56,7 @@ Use Task tool with `general-purpose` type. Reviewer evaluates plan alignment, AC
 
 **3. After code review feedback is applied, dispatch maintainability reviewer subagent (template at `maintainability-reviewer.md`):**
 
-Maintainability review runs in sequence after code review (NOT in parallel — it benefits from seeing post-code-review state). Reviewer evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, ADR debt, cross-component drift.
+Maintainability review runs in sequence after code review (NOT in parallel — it benefits from seeing post-code-review state). Reviewer evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, Comments in the wrong home (per `test-driven-development/clean-code.md`), ADR debt, cross-component drift.
 
 **Additional placeholders for maintainability-reviewer.md:**
 - `{QUALITY_BAR}` - The project's quality-bar text, lifted verbatim (e.g., the Polis-bar §3.1 + concrete enforcement §3.3 from a Foundation-on-Polis spec)
