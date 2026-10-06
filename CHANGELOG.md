@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-07
+
+### Added
+- **`test-driven-development/clean-code.md`: where each kind of information belongs** (Heiko, 2026-10-07: "give
+  the implementer clear instructions on what clean code is and how to use comments"). Docstring = the contract
+  (what, inputs, outputs, errors), comment = a non-obvious *why* at its line, code = *how*, history → commit and
+  PR text, cross-module rationale → architecture page, never-break rules → tests, follow-ups → Jira. A "never in
+  code" table (PR/review history, spec ids as the explanation, internal ids in error messages, line-number
+  citations, re-stating the code, 🔴/⚠️, arguing with a reviewer, measurement narratives, "temporary" notes,
+  commented-out code), a before/after, a five-question self-check and red flags.
+  - **Do not match an over-commented neighbour.** The baseline showed imitation is the cause: an implementer given
+    a spec with ids, a review ruling and helvetiq's `gateways/llm/adapter.py` (49% docs, 83 spec ids, 35 🔴) next to
+    it wrote 🔴, review history and spec ids in operator-facing error messages; without the neighbour it wrote far
+    fewer. With `clean-code.md` it wrote contract-only docstrings and plain error messages, and named the conflict.
+  - Wired in: TDD REFACTOR step, verification checklist and bundled references; the implementer self-review; the
+    code-quality reviewer prompt; the maintainability reviewer ("Comments in the wrong home").
+
 ## [1.9.0] - 2026-10-06
 
 ### Added
