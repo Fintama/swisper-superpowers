@@ -78,6 +78,19 @@ bash skills/test-driven-development/trace-check.sh origin/main...HEAD   # in a p
 
 **Wiring it into a project's CI** (one job, on pull requests): check out with `fetch-depth: 0`, then `bash scripts/trace-check.sh "origin/${{ github.base_ref }}...HEAD"`. It needs bash, git and awk — nothing to install. Extra id shapes for one project: `TRACE_CHECK_ID_RE='SA-[0-9]+'`. It reads **new** tests only, so a legacy suite does not block day one; existing untraced tests are deleted or renamed as PRs touch them (R7).
 
+## Senior-engineer pass — it decides which tests matter, before the first RED
+
+Right before the first failing test, think through the senior-engineer pass: what a junior would do here, what the senior design does instead, and the invariants it protects (template: `subagent-driven-development/implementer-prompt.md`). It is a reasoning step, not a gate — nobody approves it. Its test half is this table:
+
+| | A junior tests | A senior tests |
+|---|---|---|
+| **Altitude** | the function that computes the answer | the promise, where it is received — [`proving-acs.md`](proving-acs.md) |
+| **Paths** | the happy path | the happy path **and** the negative path: refused, and nothing stored |
+| **Edges** | — | the boundary or limit the pass named: the cap and cap + 1, the timeout |
+| **Dependencies** | mocked to succeed | each dependency failing: down, slower than the timeout, malformed |
+
+**This adds no tests beyond R5 — it picks them.** Each row maps to an R2 id: an `I` line is an `INV` test, a failure mode is an `FM` test, a limit is **a row in the AC's table** (R6), not a new test. A limit or failure mode the pass names that the plan has no id for is a plan gap — ask; never write it untraced.
+
 ## TDD Evidence (binding when working from a plan)
 
 TDD is verified by **commit history**, not by claim: the failing-test commit precedes the passing-test commit, and `git log -p` over the PR shows it. Tests added in the same commit as the implementation, or after it, are a TDD violation. The implementer reports both SHAs.
@@ -289,6 +302,7 @@ Which tool per language (Vitest, Playwright, pytest, fast-check, Stryker, Pact, 
 
 ## Verification Checklist
 
+- [ ] Senior-engineer pass done before the first RED; its negative path, limits, dependency failures and invariants each map to a test or a table row on the list
 - [ ] Every test I added or changed names an AC, INV or FM id; `trace-check.sh` summary line quoted
 - [ ] Every AC the task claims has a test at promise altitude (`proving-acs.md` gate passed)
 - [ ] Every unit test is an R3 exception — table or property, never N copies

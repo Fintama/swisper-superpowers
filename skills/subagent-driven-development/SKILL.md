@@ -62,7 +62,7 @@ digraph process {
         "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" [shape=box];
+        "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [shape=box];
         "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
         "Code quality reviewer subagent approves?" [shape=diamond];
         "Mark task complete in TodoWrite" [shape=box];
@@ -86,8 +86,8 @@ digraph process {
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [label="no"];
+    "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
     "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Start next task's implementer in parallel (reviewer is a READER)" [label="if next task is independent"];
     "Start next task's implementer in parallel (reviewer is a READER)" [shape=box];
     "Fix round (max 3, then the breaker)" [shape=box];
@@ -364,6 +364,21 @@ untraced tests asked for 4 deletions and **2 more**.* The rules are
   `trace-check.sh` (in `test-driven-development`), not from memory. **At the PR
   boundary, net growth is explained** — which promises the new tests prove, and which
   lower tests a new higher one made redundant and were deleted.
+
+## Senior-engineer pass — before the first line of code
+
+Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Right
+before its first test, every implementer reasons in a ≤12-line note (template and list of
+junior anti-patterns in `implementer-prompt.md`): **J** — what a junior would most likely
+do in THIS task; **S** — the senior design instead: existing pieces reused
+(`path::symbol`), failure modes, limits, compatibility, observability, and what it will
+NOT build; **I** — the invariants it protects and the test proving each.
+
+- **It is a reasoning step, not a gate.** Nobody approves it, nothing waits on it, no
+  extra dispatch. The note goes in the implementer's report; the code-quality reviewer
+  may read it as context.
+- **The dispatch carries the spec's §1 `seam`, `mechanism` and `senior` lines**, so the
+  pass starts from the designer's answer instead of re-deriving it.
 
 ## When to run what — the gate ladder
 

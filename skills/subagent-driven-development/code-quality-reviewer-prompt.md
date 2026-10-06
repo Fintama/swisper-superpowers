@@ -10,7 +10,7 @@ Use this template when dispatching a code quality reviewer subagent.
 Task tool (general-purpose):
   Use template at requesting-code-review/code-reviewer.md
 
-  DESCRIPTION: [task summary, from implementer's report]
+  DESCRIPTION: [task summary, from implementer's report — include its senior-engineer pass note, as context]
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]
   BASE_SHA: [commit before task]
   HEAD_SHA: [current commit]

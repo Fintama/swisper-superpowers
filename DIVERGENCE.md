@@ -84,6 +84,9 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `writing-plans` | `once, at the end of the wave PR` | Shared and generated files are the wave's last task. Same measurement as above. |
 | `writing-plans` | `Ship to main by value` | A main merge is planned after each goal's first-delivery wave. Same measurement as the `running-a-programme` row. |
 | `requesting-code-review` | `at the FIRST push` | Draft PR plus `@codex review` at the first push, so automated findings arrive with the first CI run. Measured 2026-10-05: four helvetiq PRs got valid Codex findings after CI was green; drafts are not auto-reviewed. |
+| `subagent-driven-development` | `Senior-engineer pass` | Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Right before its first test every implementer reasons in a ≤12-line note — J (the junior anti-patterns for THIS task), S (the senior design: reuse by `path::symbol`, failure modes, limits, compatibility, observability, what it will NOT build), I (invariants → tests) — and puts it in its report. A reasoning step, not a gate: nobody approves it. The template lives in `implementer-prompt.md`; this row guards the SKILL.md section pointing to it. |
+| `test-driven-development` | `A junior tests` | The senior-engineer pass picks the tests before the first RED: promise altitude, negative path, the named limit, each dependency failing — mapped to R2 ids, never extra untraced tests. |
+| `brainstorming` | `junior would:` | §1's `senior` field: per change, what a junior would build and what the design does instead. It replaced the seam's "obvious alternative it beat" clause; self-review check 7 confirms the rest of the spec carries it. |
 | `finishing-a-development-branch` | `gh pr ready` | An existing draft from the first push is marked ready, not duplicated. |
 
 ## Rows deliberately NOT in this table

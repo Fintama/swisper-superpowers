@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-06
+
+### Added
+- **Senior-engineer pass** (Heiko, 2026-10-06: "how can I avoid the code being that of a junior developer? What
+  would a junior developer do, and how would a senior make it more robust, scalable and maintainable?"). A
+  reasoning step that makes the implementer think about what good code looks like for THIS task before writing
+  it. **Not a gate and not a review step:** no stop, no approval, no extra dispatch.
+  - `subagent-driven-development/implementer-prompt.md`: right before the first test the implementer writes a
+    ≤12-line note — **J** 2–4 junior anti-patterns specific to this task (picked from a named list), **S** the
+    senior design (reuse by `path::symbol`, failure modes, limits with numbers, compatibility, log codes and
+    timing, what it will NOT build), **I** each invariant → the test that proves it — and includes it in its report.
+  - `subagent-driven-development/SKILL.md`: short section; the dispatch carries the spec's §1 `seam`, `mechanism`
+    and `senior` lines; the implementer step in the process graph names the pass. `code-quality-reviewer-prompt.md`
+    only passes the note along as context — no new review mode or finding category.
+  - `test-driven-development`: the pass picks the tests before the first RED (promise altitude, negative path,
+    the named limit, each dependency failing), mapped to R2 ids — it adds no untraced tests. Links `proving-acs.md`.
+  - Code shape (Heiko, same day: "nested ifs to be avoided; design patterns when it makes sense"): the J list
+    names nested ifs and patterns-for-their-own-sake; a new **S shape** line asks for guard clauses / decision
+    tables / dispatch maps, and a named pattern (strategy, adapter, state machine, factory) only where it removes
+    a real branch explosion or duplication.
+  - `brainstorming`: §1 gains a one-line `senior` field (junior would… / senior does…) feeding `seam` and
+    `mechanism`; it **replaces** the seam's "name the obvious alternative it beat" clause. Self-review check 7
+    confirms the rest of the spec carries it (still seven checks; no agent review gate).
+  - DIVERGENCE.md: 3 rows guard it.
+
 ## [1.8.2] - 2026-10-05
 
 ### Fixed

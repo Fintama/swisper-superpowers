@@ -272,7 +272,9 @@ An N/A line is a **claim**, and the user — or the implementer who hits it — 
                 verified_by:  read | executed | pinned | none_exists
    tomorrow     the MUSTs that share this seam (1-3). Two seams ⇒ two changes.
    logic        → §2 RULE-n  +  evaluated_at · inputs bind from · recomputed · writes
-   seam         path::symbol — why HERE, naming the obvious alternative it beat
+   seam         path::symbol — why HERE
+   senior       junior would: <the obvious build> · senior does: <the reuse,
+                and the failure mode / limit / compatibility it handles>
    mechanism    in_place | wrap | sprout | extract_interface |
                 branch_by_abstraction | strangler | delete | fill_scaffold
    call sites   every site this is reachable from — enumerated, not estimated
@@ -292,7 +294,7 @@ An N/A line is a **claim**, and the user — or the implementer who hits it — 
    **Five rules that make the fields worth having:**
 
    - **`today` is baseline — the code is the only oracle.** A `today` that was never opened is a hypothesis wearing a fact's clothes. `verified_by: read` is allowed and *visible*, so "I read it" and "I ran it" stop being written identically. On a `MODIFIED` change against behaviour you depend on, `read` should be rare and should say why it wasn't run.
-   - **A seam names why HERE, and the obvious alternative it beat.** A seam with no rejected alternative is a file path, not a decision.
+   - **`senior` is the seam's rejected alternative, made concrete** (Heiko, 2026-10-06: *"what would a junior developer do, and how would a senior make it more robust, scalable and maintainable?"*). One line: what a junior would most likely build here — a second path beside this seam, a new store beside the owner, a hard-coded value, a per-message check for a per-session rule, no timeout or cap — and what this design does instead: the existing piece it reuses, and the failure mode, limit or compatibility it handles. It feeds `seam` and `mechanism`, and the implementer's senior-engineer pass starts from it. **It replaces the old "name the obvious alternative it beat" clause** — the junior build *is* that alternative. A seam with no junior alternative is a file path, not a decision.
    - **`mechanism` is the how-do-we-get-there.** `wrap` and `in_place` produce different diffs from the same `tomorrow`; leaving it unsaid is where the implementer improvises.
    - **Every field is read by an implementer holding only this change.** Write instructions, not commentary. Never "see C5" — that edge goes in `depends_on`, where the plan can act on it.
    - **The change points outward; nothing points back at it.** ACs name their changes, contracts name their changes, delivery items name their changes. Link once, in one direction, or two hand-maintained edges drift.
@@ -545,10 +547,14 @@ Fix any issues inline. No need to re-review — just fix and move on.
    Open them. A `today` that was never opened is a hypothesis wearing a fact's clothes, and every
    later judgement — the seam, the mechanism, the call-site list — rests on it. Confirm the seam with
    `find-refs` (not a call-shaped grep: a dependency passed as a *value* is invisible to one), and
-   confirm the call-site list is enumerated rather than estimated.
+   confirm the call-site list is enumerated rather than estimated. Then each change's **`senior`
+   line**: the reuse it names appears in `seam` or `anchors`, and the limit or failure mode it names
+   reaches §2 or an AC. A `senior` line nothing else in the spec carries is decoration — carry it or
+   cut it.
 
 **Where the other ten checks went:** reuse-before-build → **check 6 above** · codebase reality →
-**check 7 above** · simplify / elegant / robust → code review, at implementation time ·
+**check 7 above** · robust → §1's `senior` line (checked in check 7), then the implementer's
+senior-engineer pass · simplify / elegant → code review, at implementation time ·
 abstraction & extensibility, design patterns → deleted outright · business-AC → §0's Value field ·
 ownership boundaries → section 4's trigger · placeholder, consistency, scope and ambiguity → checks 1
 and 2 above (and the placeholder grep, cut with spec-check.sh).
