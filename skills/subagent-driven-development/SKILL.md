@@ -62,7 +62,7 @@ digraph process {
         "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" [shape=box];
+        "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [shape=box];
         "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
         "Code quality reviewer subagent approves?" [shape=diamond];
         "Mark task complete in TodoWrite" [shape=box];
@@ -86,8 +86,8 @@ digraph process {
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, runs SCOPED tests, commits, self-reviews" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" [label="no"];
+    "Implementer subagent writes senior-engineer pass, implements, runs SCOPED tests, commits, self-reviews" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
     "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Start next task's implementer in parallel (reviewer is a READER)" [label="if next task is independent"];
     "Start next task's implementer in parallel (reviewer is a READER)" [shape=box];
     "Fix round (max 3, then the breaker)" [shape=box];
@@ -364,6 +364,25 @@ untraced tests asked for 4 deletions and **2 more**.* The rules are
   `trace-check.sh` (in `test-driven-development`), not from memory. **At the PR
   boundary, net growth is explained** — which promises the new tests prove, and which
   lower tests a new higher one made redundant and were deleted.
+
+## Senior-engineer pass — before the first line of code
+
+Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Every
+implementer writes a ≤12-line note before its first test (template and list of junior
+anti-patterns in `implementer-prompt.md`): **J** — what a junior would most likely do in
+THIS task; **S** — the senior design instead: existing pieces reused (`path::symbol`),
+failure modes, limits, compatibility, observability, and what it will NOT build;
+**I** — the invariants it protects and the test proving each.
+
+- **The dispatch carries the spec's §1 `seam`, `mechanism` and `senior` lines**, so the
+  pass starts from the designer's answer instead of re-deriving it.
+- **It lives in the first commit's body and the report.** The commit is the evidence it
+  came before the code, the same way the failing-test commit is the evidence for TDD.
+- **The reviewer grades the diff against it** (`code-quality-reviewer-prompt.md`): a J
+  line present, or an S line not borne out, is a finding.
+- **It is not a design gate and not a licence.** Nobody approves the note. A senior design
+  that leaves `may_edit` or contradicts the spec's seam is a stop-and-report, not a build.
+  Fix rounds do not rewrite it unless the design changed.
 
 ## When to run what — the gate ladder
 
@@ -764,6 +783,7 @@ agent". Parallelism is safe only across separate worktrees, or between readers.
 - Move to next task while any assigned review has open issues
 - Answer a finding or a surviving mutant with a NEW test while an existing test claims the behaviour — strengthen it
 - Accept a report that counts tests added but not deleted, or a PR whose net test growth nobody explained
+- Accept a report without its senior-engineer pass, or a pass that is not in the first commit's body
 
 **If subagent asks questions:**
 - Answer clearly and completely — with the property and its failing test, not a mechanism (see "Rule on the property, not the mechanism")

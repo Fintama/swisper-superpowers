@@ -73,9 +73,48 @@ Task tool (general-purpose):
 
     **Ask them now.** Raise any concerns before starting work.
 
+    ## Senior-engineer pass — BEFORE any code or test
+
+    [CONTROLLER: paste the spec §1 change this task implements — its `seam`,
+     `mechanism` and `senior` lines — if the spec has them.]
+
+    After reading the task, the spec section and the code it touches, and before
+    the first test, write this note (≤12 lines). It goes in the **body of your
+    first commit** (the failing-test commit — that is what proves it came first)
+    and **verbatim in your report**:
+
+        J  junior would: <anti-pattern specific to THIS task>        (2–4 J lines)
+        S  reuses:       <path::symbol> — the existing seam / owner / helper
+        S  fails safely: <dependency down · bad input · partial write> → <caller gets>
+        S  limits:       <timeout · size cap · rate · page size · retry bound — numbers>
+        S  compatible:   <callers, stored data, clients that keep working> | no contract touched
+        S  observable:   <log code(s) + the timing recorded>
+        S  will NOT build: <the tempting generalisation left out>
+        I  protects:     <INV / AC / FM id> — <what must always hold> → <test title>
+
+    **J lines** — what a junior would most likely do HERE. Draw from this list,
+    written in this task's terms (a list item copied verbatim is not a J line):
+    a second code path beside an existing seam · a new store or owner instead of
+    the existing one · hard-coded values · a check per message where the rule is
+    per session · catch-all exceptions · happy-path tests of the function rather
+    than the promise · no timeout, cap or idempotency · an unbounded loop or
+    query · sync I/O in a hot path · a new dependency for a small thing.
+
+    **S lines are claims the reviewer checks against your diff.** Write only what
+    the diff will show; a line that does not apply says `n/a — <why>`, never
+    blank. `reuses` cites a symbol you found (`prism check` / `search`, or grep),
+    never memory. **Senior is not bigger:** the pass usually makes the diff
+    smaller, and `will NOT build` is where it says so. If the senior design needs
+    a file outside `may_edit`, or contradicts the spec's seam or mechanism, stop
+    and report — do not build it.
+
+    **I lines feed TDD:** each names a test on the plan's list. An invariant,
+    limit or failure mode with no test on the list is a plan gap — report it.
+
     ## Your Job
 
     Once you're clear on requirements:
+    0. **Write the senior-engineer pass** (above). It decides which tests matter.
     1. **Invoke `superpowers:test-driven-development`** before writing any production code. TDD is binding for new features, bug fixes, refactors, and behavior changes — not optional. The exceptions (throwaway prototypes, generated code, configuration files) require the controller's explicit approval.
     2. Implement exactly what the task specifies
     3. Write tests FIRST per TDD (RED → verify fails for the right reason → GREEN → REFACTOR)
@@ -276,6 +315,7 @@ Task tool (general-purpose):
     - Is the code clean and maintainable?
 
     **Discipline:**
+    - **Diff against my senior-engineer pass:** is any J line in the diff anyway? Is every S line borne out by the diff? Fix the code, or correct the note and say so in the report — never leave the two disagreeing.
     - Did I avoid overbuilding (YAGNI)?
     - Did I only build what was requested?
     - Did I follow existing patterns in the codebase?
@@ -300,6 +340,7 @@ Task tool (general-purpose):
     When done, report:
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
     - What you implemented (or what you attempted, if blocked)
+    - **Senior-engineer pass:** the note verbatim, plus the SHA of the commit whose body carries it
     - **TDD evidence:** commit SHAs for the failing-test commit AND the passing-test commit, in order. If multiple TDD cycles ran (one per AC), list each cycle's pair.
     - **Tests:** one line per test touched — `added | strengthened | deleted`, id, title, file, altitude (route / browser / property / unit-R3). Then `Tests +a ~s −d`, and the `trace-check.sh` summary line verbatim. Any net growth beyond the plan's list: say which promise each extra test proves.
     - **AC coverage:** each AC / INV / FM on the plan's list → the test that proves it.
