@@ -11,16 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Senior-engineer pass** (Heiko, 2026-10-06: "how can I avoid the code being that of a junior developer? What
-  would a junior developer do, and how would a senior make it more robust, scalable and maintainable?").
-  - `subagent-driven-development/implementer-prompt.md`: before the first test the implementer writes a ≤12-line
-    note — **J** 2–4 junior anti-patterns specific to this task (picked from a named list), **S** the senior design
-    (reuse by `path::symbol`, failure modes, limits with numbers, compatibility, log codes and timing, what it will
-    NOT build), **I** each invariant → the test that proves it. It goes in the first commit's body (proof it came
-    first) and verbatim in the report; self-review diffs the code against it.
-  - `code-quality-reviewer-prompt.md`: the reviewer grades the diff against the note — a J line present, an S claim
-    not borne out, a listed anti-pattern the note missed, or a "will NOT build" item built is a finding.
-  - `subagent-driven-development/SKILL.md`: new short section; the dispatch carries the spec's §1 `seam`,
-    `mechanism` and `senior` lines; process graph and Red Flags updated. Not a gate — nobody approves the note.
+  would a junior developer do, and how would a senior make it more robust, scalable and maintainable?"). A
+  reasoning step that makes the implementer think about what good code looks like for THIS task before writing
+  it. **Not a gate and not a review step:** no stop, no approval, no extra dispatch.
+  - `subagent-driven-development/implementer-prompt.md`: right before the first test the implementer writes a
+    ≤12-line note — **J** 2–4 junior anti-patterns specific to this task (picked from a named list), **S** the
+    senior design (reuse by `path::symbol`, failure modes, limits with numbers, compatibility, log codes and
+    timing, what it will NOT build), **I** each invariant → the test that proves it — and includes it in its report.
+  - `subagent-driven-development/SKILL.md`: short section; the dispatch carries the spec's §1 `seam`, `mechanism`
+    and `senior` lines; the implementer step in the process graph names the pass. `code-quality-reviewer-prompt.md`
+    only passes the note along as context — no new review mode or finding category.
   - `test-driven-development`: the pass picks the tests before the first RED (promise altitude, negative path,
     the named limit, each dependency failing), mapped to R2 ids — it adds no untraced tests. Links `proving-acs.md`.
   - `brainstorming`: §1 gains a one-line `senior` field (junior would… / senior does…) feeding `seam` and

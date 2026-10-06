@@ -367,22 +367,18 @@ untraced tests asked for 4 deletions and **2 more**.* The rules are
 
 ## Senior-engineer pass — before the first line of code
 
-Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Every
-implementer writes a ≤12-line note before its first test (template and list of junior
-anti-patterns in `implementer-prompt.md`): **J** — what a junior would most likely do in
-THIS task; **S** — the senior design instead: existing pieces reused (`path::symbol`),
-failure modes, limits, compatibility, observability, and what it will NOT build;
-**I** — the invariants it protects and the test proving each.
+Heiko, 2026-10-06: *"how can I avoid the code being that of a junior developer?"* Right
+before its first test, every implementer reasons in a ≤12-line note (template and list of
+junior anti-patterns in `implementer-prompt.md`): **J** — what a junior would most likely
+do in THIS task; **S** — the senior design instead: existing pieces reused
+(`path::symbol`), failure modes, limits, compatibility, observability, and what it will
+NOT build; **I** — the invariants it protects and the test proving each.
 
+- **It is a reasoning step, not a gate.** Nobody approves it, nothing waits on it, no
+  extra dispatch. The note goes in the implementer's report; the code-quality reviewer
+  may read it as context.
 - **The dispatch carries the spec's §1 `seam`, `mechanism` and `senior` lines**, so the
   pass starts from the designer's answer instead of re-deriving it.
-- **It lives in the first commit's body and the report.** The commit is the evidence it
-  came before the code, the same way the failing-test commit is the evidence for TDD.
-- **The reviewer grades the diff against it** (`code-quality-reviewer-prompt.md`): a J
-  line present, or an S line not borne out, is a finding.
-- **It is not a design gate and not a licence.** Nobody approves the note. A senior design
-  that leaves `may_edit` or contradicts the spec's seam is a stop-and-report, not a build.
-  Fix rounds do not rewrite it unless the design changed.
 
 ## When to run what — the gate ladder
 
@@ -783,7 +779,6 @@ agent". Parallelism is safe only across separate worktrees, or between readers.
 - Move to next task while any assigned review has open issues
 - Answer a finding or a surviving mutant with a NEW test while an existing test claims the behaviour — strengthen it
 - Accept a report that counts tests added but not deleted, or a PR whose net test growth nobody explained
-- Accept a report without its senior-engineer pass, or a pass that is not in the first commit's body
 
 **If subagent asks questions:**
 - Answer clearly and completely — with the property and its failing test, not a mechanism (see "Rule on the property, not the mechanism")

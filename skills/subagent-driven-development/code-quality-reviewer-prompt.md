@@ -10,7 +10,7 @@ Use this template when dispatching a code quality reviewer subagent.
 Task tool (general-purpose):
   Use template at requesting-code-review/code-reviewer.md
 
-  DESCRIPTION: [task summary, from implementer's report — include its senior-engineer pass note verbatim]
+  DESCRIPTION: [task summary, from implementer's report — include its senior-engineer pass note, as context]
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]
   BASE_SHA: [commit before task]
   HEAD_SHA: [current commit]
@@ -22,14 +22,6 @@ Task tool (general-purpose):
 - Is the implementation following the file structure from the plan?
 - Did this implementation create new files that are already large, or significantly grow existing files? (Don't flag pre-existing file sizes — focus on what this change contributed.)
 - **Did it reimplement something that already exists?** For each new helper / util / service the change adds, confirm there isn't an existing equivalent it should have reused.
-
-**Senior-engineer pass — check the diff against the implementer's note** (in the report and in the body of the first commit; template in `implementer-prompt.md`):
-- **No note, or the note is not in the first commit's body** → Important. It was written after the code, so it describes the code instead of steering it.
-- **A J line present in the diff anyway** → finding. Important; **Critical** when it is a second owner or a bypass of an existing sole owner.
-- **An S line the diff does not bear out** → finding: a `reuses` symbol never called, a stated timeout or cap absent, a log code not emitted, a compatibility claim nothing in code or tests supports.
-- **A junior anti-pattern from the template's list that the note missed** but the diff contains → finding, same severity as a J line.
-- **Something under `will NOT build` built anyway**, or a generalisation beyond the task → finding (over-build).
-- **Each I line:** the named test exists and asserts that invariant at promise altitude.
 
 **Tests — check the list, not the count** (`test-driven-development` R1–R7):
 - **Against the plan:** every test the plan names for this task exists, at its altitude. A missing AC test is Important.

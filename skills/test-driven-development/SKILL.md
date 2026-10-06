@@ -80,7 +80,7 @@ bash skills/test-driven-development/trace-check.sh origin/main...HEAD   # in a p
 
 ## Senior-engineer pass — it decides which tests matter, before the first RED
 
-Before the first failing test, write the senior-engineer pass: what a junior would do here, what the senior design does instead, and the invariants it protects (template: `subagent-driven-development/implementer-prompt.md`; outside that skill, put the same note in your first commit's body). Its test half is this table:
+Right before the first failing test, think through the senior-engineer pass: what a junior would do here, what the senior design does instead, and the invariants it protects (template: `subagent-driven-development/implementer-prompt.md`). It is a reasoning step, not a gate — nobody approves it. Its test half is this table:
 
 | | A junior tests | A senior tests |
 |---|---|---|
@@ -302,7 +302,7 @@ Which tool per language (Vitest, Playwright, pytest, fast-check, Stryker, Pact, 
 
 ## Verification Checklist
 
-- [ ] Senior-engineer pass written before the first RED; its negative path, limits, dependency failures and invariants each map to a test or a table row on the list
+- [ ] Senior-engineer pass done before the first RED; its negative path, limits, dependency failures and invariants each map to a test or a table row on the list
 - [ ] Every test I added or changed names an AC, INV or FM id; `trace-check.sh` summary line quoted
 - [ ] Every AC the task claims has a test at promise altitude (`proving-acs.md` gate passed)
 - [ ] Every unit test is an R3 exception — table or property, never N copies
