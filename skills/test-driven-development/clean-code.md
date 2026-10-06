@@ -116,6 +116,14 @@ The ruling's *reason* stays, in one sentence. Its *history* (PR-6a, AM-12, the
 date) goes in the PR description. Its *enforcement* is the T-AC test that fails
 if a fallback comes back.
 
+## Mechanical checks
+
+If the project has a comment lint, run it before you commit. In helvetiq,
+`cd apps/backend && python -m scripts.lint.citations --whole-scope` enforces
+docstring length and bans spec, PR, review and line-number references in the
+model layer. A lint cannot judge alarm markers, re-stated code or arguments
+with a reviewer. Those are the self-check below.
+
 ## Self-check before you commit
 
 For each docstring or comment you added or changed:

@@ -18,11 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   citations, re-stating the code, 🔴/⚠️, arguing with a reviewer, measurement narratives, "temporary" notes,
   commented-out code), a before/after, a five-question self-check and red flags.
   - **Do not match an over-commented neighbour.** The baseline showed imitation is the cause: an implementer given
-    a spec with ids, a review ruling and helvetiq's `gateways/llm/adapter.py` (49% docs, 83 spec ids, 35 🔴) next to
+    a spec with ids, a review ruling and helvetiq's `gateways/llm/adapter.py` as it was before the 2026-10-05 cleanup (49% docs, 83 spec ids, 35 🔴) next to
     it wrote 🔴, review history and spec ids in operator-facing error messages; without the neighbour it wrote far
     fewer. With `clean-code.md` it wrote contract-only docstrings and plain error messages, and named the conflict.
   - Wired in: TDD REFACTOR step, verification checklist and bundled references; the implementer self-review; the
-    code-quality reviewer prompt; the maintainability reviewer ("Comments in the wrong home").
+    code-quality reviewer prompt; the maintainability reviewer ("Comments in the wrong home"). Points at a project's comment lint where one exists
+    (helvetiq: `scripts.lint.citations`) and says what a lint cannot judge.
 
 ## [1.9.0] - 2026-10-06
 
