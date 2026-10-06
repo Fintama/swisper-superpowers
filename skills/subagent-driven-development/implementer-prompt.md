@@ -89,6 +89,8 @@ Task tool (general-purpose):
         S  limits:       <timeout · size cap · rate · page size · retry bound — numbers>
         S  compatible:   <callers, stored data, clients that keep working> | no contract touched
         S  observable:   <log code(s) + the timing recorded>
+        S  shape:        <guard clauses / decision table / named pattern that removes a real branch
+                          explosion or duplication> | plain functions — no pattern earned
         S  will NOT build: <the tempting generalisation left out>
         I  protects:     <INV / AC / FM id> — <what must always hold> → <test title>
 
@@ -98,11 +100,17 @@ Task tool (general-purpose):
     the existing one · hard-coded values · a check per message where the rule is
     per session · catch-all exceptions · happy-path tests of the function rather
     than the promise · no timeout, cap or idempotency · an unbounded loop or
-    query · sync I/O in a hot path · a new dependency for a small thing.
+    query · sync I/O in a hot path · a new dependency for a small thing ·
+    nested ifs (more than two levels, or a growing if/elif chain on one value) ·
+    a design pattern used for its own sake.
 
     **S lines** — a line that does not apply says `n/a — <why>`, never blank.
     `reuses` cites a symbol you found (`prism check` / `search`, or grep), never
-    memory. **Senior is not bigger:** the pass usually makes the diff smaller,
+    memory. `shape`: flatten with guard clauses and early returns; a rule with
+    several outcomes becomes a decision table or a dispatch map (the spec's §2 RULE
+    usually is one already); reach for a named pattern — strategy, adapter, state
+    machine, factory — only when it removes a real branch explosion or duplication
+    that exists today, and name it. No pattern is the right answer for straight-line code. **Senior is not bigger:** the pass usually makes the diff smaller,
     and `will NOT build` is where it says so. If the senior design needs a file
     outside `may_edit`, or contradicts the spec's seam or mechanism, stop and
     report — do not build it.

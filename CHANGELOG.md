@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     only passes the note along as context — no new review mode or finding category.
   - `test-driven-development`: the pass picks the tests before the first RED (promise altitude, negative path,
     the named limit, each dependency failing), mapped to R2 ids — it adds no untraced tests. Links `proving-acs.md`.
+  - Code shape (Heiko, same day: "nested ifs to be avoided; design patterns when it makes sense"): the J list
+    names nested ifs and patterns-for-their-own-sake; a new **S shape** line asks for guard clauses / decision
+    tables / dispatch maps, and a named pattern (strategy, adapter, state machine, factory) only where it removes
+    a real branch explosion or duplication.
   - `brainstorming`: §1 gains a one-line `senior` field (junior would… / senior does…) feeding `seam` and
     `mechanism`; it **replaces** the seam's "name the obvious alternative it beat" clause. Self-review check 7
     confirms the rest of the spec carries it (still seven checks; no agent review gate).
