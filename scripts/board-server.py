@@ -32,22 +32,20 @@ H = _pd()
 ROOT = _pr()
 OUTBOX = f"{H}/outbox-to-pm.md"
 
-# The board's own directory. Prefer the programme's .handover/board; fall back to the
-# legacy mocks location so an existing programme keeps working.
-_LEGACY = f"{ROOT}/docs/superpowers/specs/2026-07-25-generic-agent-and-pdlc-overview-mockups"
-BOARD = f"{H}/board" if os.path.isdir(f"{H}/board") else _LEGACY
-# Written by the PM AFTER acting: {"<decision id>": {"at": "...", "did": "<what happened>"}}
-ACKS = f"{BOARD}/acks.json"
-
-# Ports are global to the machine: take board.port from program.yaml, or a second
-# programme on the same laptop fails to bind.
-PORT = 8794
+# board.dir (relative to the programme root) and board.port from program.yaml; without
+# one, the programme's own board directory. Ports are global to the machine, so a second
+# programme on the same laptop needs its own board.port.
+BOARD, PORT = f"{H}/board", 8794
 try:
     import yaml  # noqa: F401  (PyYAML is a documented prerequisite)
     with open(f"{ROOT}/program.yaml") as _f:
-        PORT = int((yaml.safe_load(_f).get("board") or {}).get("port", PORT))
+        _board = yaml.safe_load(_f).get("board") or {}
+    BOARD = os.path.join(ROOT, _board.get("dir", BOARD))
+    PORT = int(_board.get("port", PORT))
 except Exception:
     pass
+# Written by the PM AFTER acting: {"<decision id>": {"at": "...", "did": "<what happened>"}}
+ACKS = f"{BOARD}/acks.json"
 
 _LINE = re.compile(r"HEIKO (\S+) (\S+) \[via board\] — \*\*(.+?)\*\* → \*\*(.+?)\*\*")
 
@@ -109,6 +107,9 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if not os.path.isdir(BOARD):
+        _s.exit(f"REFUSED: the board directory {BOARD} does not exist. Create it, or set "
+                "board.dir in program.yaml.")
     print(f"Mission Control on http://localhost:{PORT}/   (serving {BOARD})")
     print(f"decisions → {OUTBOX}")
     print("⚠ Arm the Monitor watch on that file, or a click will not wake the PM.")

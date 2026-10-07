@@ -4,7 +4,8 @@
 # on its stale plan, forking a lane.
 #
 # A process is killed only if its session id is on no code line of ws-pulse.py (ids in
-# comments don't count). Remap a lane to its successor before running this.
+# comments don't count): the lane rows and its `PM = "<id>"` line. Remap a lane, or the
+# PM, to its successor before running this.
 #
 # Usage:  bash .handover/reap-ghosts.sh          # report only (default, safe)
 #         bash .handover/reap-ghosts.sh --kill   # actually reap

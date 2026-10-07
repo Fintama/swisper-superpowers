@@ -4,6 +4,7 @@
 #
 #   bash scripts/spawn-lane.sh WS3 "Agents & PDLC" 1 ../repo/.worktrees/ws3
 #   bash scripts/spawn-lane.sh WS3 "Agents & PDLC" 4 /abs/path/wt --model opus
+#   bash scripts/spawn-lane.sh PM "Program Manager" 3 /abs/path/wt --session pm-3
 #
 # Guards:
 #  1. The model is pinned: a bare `claude` inherits the last-saved default. Verify it after boot.
@@ -12,6 +13,8 @@
 #  3. Type and Enter are separate send-keys calls with a pause; combined, the text sits unsubmitted.
 #  4. tmux, not screen: macOS's screen cannot inject into or capture a detached TUI.
 #  5. An existing tmux session of the same name is refused: never fork a live lane.
+#     The name is the lowercased WS-id; --session names it instead, for a successor PM
+#     whose predecessor still holds tmux session `pm`. The guard applies to that name.
 #  6. The worktree is an argument, passed with -c and asserted from the booted session.
 #     A session works in the cwd it was started in, whatever its briefing says, and two
 #     sessions in one .git/index give silent false greens.
@@ -27,16 +30,18 @@
 set -euo pipefail
 
 MODEL="opus"
+SESSION=""
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --model) MODEL="$2"; shift 2 ;;
+    --session) SESSION="$2"; shift 2 ;;
     *) ARGS+=("$1"); shift ;;
   esac
 done
 
 if [ "${#ARGS[@]}" -lt 4 ]; then
-  echo "usage: spawn-lane.sh <WS-id> <lane title> <session-number> <worktree-path> [--model <name>]" >&2
+  echo "usage: spawn-lane.sh <WS-id> <lane title> <session-number> <worktree-path> [--model <name>] [--session <tmux-name>]" >&2
   echo "   eg: spawn-lane.sh WS3 \"Agents & PDLC\" 1 ../helvetiq/.worktrees/ws3" >&2
   echo "" >&2
   echo "The worktree is REQUIRED (guard 6). Without it the lane starts in the" >&2
@@ -45,7 +50,7 @@ if [ "${#ARGS[@]}" -lt 4 ]; then
 fi
 
 WS="${ARGS[0]}"; TITLE="${ARGS[1]}"; K="${ARGS[2]}"; WT_IN="${ARGS[3]}"
-SESSION="$(echo "$WS" | tr '[:upper:]' '[:lower:]')"
+[ -n "$SESSION" ] || SESSION="$(echo "$WS" | tr '[:upper:]' '[:lower:]')"
 NAME="$WS-$K $TITLE"
 
 # Guard 6a: the path must exist and be a directory, before anything else.

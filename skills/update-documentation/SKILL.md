@@ -20,7 +20,7 @@ Write the docs once per combined PR (the wave or integration PR; for a lone PR, 
 CI runs the gates on every PR, including a sub-PR into an integration branch:
 
 - **Completeness fails now.** A sub-PR that adds an inventory item (a route, table, flag, job…) adds it to the `covers:` of the page that explains it, in that sub-PR.
-- **Staleness warns until 2026-10-19, then fails.** Until then a sub-PR leaves the pages to the combined PR and lists the pages the gate named in its description, so the combined PR picks them up. From 2026-10-19 a sub-PR that changes covered code without touching the page goes red; if your lead has not said how sub-PRs handle that, ask. Never bump a `verified` stamp on a page you have not re-read just to turn the check green.
+- **Staleness blocks only a PR into `main`** (from 2026-10-19; a warning before that). On a sub-PR into an integration branch it stays a warning: leave the pages to the combined PR and list the pages the gate named in the sub-PR's description, so the combined PR picks them up. Never bump a `verified` stamp on a page you have not re-read just to turn the check green.
 
 ## 1 · Find the candidates (a lead, not the verdict)
 

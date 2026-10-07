@@ -3,7 +3,7 @@
 
 Usage:  python3 ws-pulse.py [n_recent_events]
 """
-import json, os, re, subprocess, sys, time
+import glob, json, os, re, subprocess, sys, time
 
 import sys as _s, pathlib as _p
 _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
@@ -12,9 +12,9 @@ from program_root import program_dir as _pd, program_root as _pr, program_transc
 PROJ = _pt()
 ROOT = _pr()
 
-# reap-ghosts.sh spares only session ids on code lines of this file, never ids in comments.
-# Put the live PM session id on a code line, or the reaper treats the PM as a ghost:
-# PM = "<session-uuid>"
+# The live PM's session id. reap-ghosts.sh spares only ids on code lines of this file, so
+# replace the placeholder here, on this code line, and again on every PM respawn.
+PM = "<session-uuid>"
 WS = [
     # One row per live lane session; re-map the id when a lane is re-spawned:
     #     ("WS<n>-<k> <Lane title> — <plain-language scope>", "<session-uuid>", "<worktree>")
@@ -26,6 +26,19 @@ WS = [
     # ("WS1-1 Example Lane — what this lane owns", "00000000-0000-0000-0000-000000000000", "main"),
 ]
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 6
+
+
+def programme_setting(key):
+    """An optional top-level program.yaml field; None when the file or the field is absent."""
+    path = f"{ROOT}/program.yaml"
+    if not os.path.exists(path):
+        return None
+    from program_yaml import load          # sibling; needs PyYAML only when program.yaml exists
+    return load(path).get(key)
+
+
+TRUNK = programme_setting("trunk")
+MIGRATIONS = programme_setting("migrations")
 
 
 def live_worktree(path, fallback):
@@ -103,12 +116,15 @@ for label, sid, wt_default in WS:
     print(f"    worktree {wt}")
 
     branch = sh(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd)
-    ahead = sh(["git", "rev-list", "--left-right", "--count",
-                "origin/feature/workbench...HEAD"], cwd).replace("\t", " behind / ")
-    print(f"    branch {branch}  ({ahead} ahead of trunk)")
-    commits = sh(["git", "log", "--oneline", "origin/feature/workbench..HEAD"], cwd)
-    for c in (commits.splitlines() or ["(no commits yet)"]):
-        print(f"      • {c}")
+    if TRUNK:
+        ahead = sh(["git", "rev-list", "--left-right", "--count",
+                    f"{TRUNK}...HEAD"], cwd).replace("\t", " behind / ")
+        print(f"    branch {branch}  ({ahead} ahead of {TRUNK})")
+        commits = sh(["git", "log", "--oneline", f"{TRUNK}..HEAD"], cwd)
+        for c in (commits.splitlines() or ["(no commits yet)"]):
+            print(f"      • {c}")
+    else:
+        print(f"    branch {branch}  (no trunk in program.yaml: add `trunk:` to compare)")
     dirty = sh(["git", "status", "--short"], cwd).splitlines()
     if dirty:
         print(f"    working tree: {len(dirty)} files dirty")
@@ -116,8 +132,9 @@ for label, sid, wt_default in WS:
             print(f"      {d}")
         if len(dirty) > 10:
             print(f"      … +{len(dirty)-10} more")
-    migs = sh(["bash", "-c", "ls backend/drizzle/00*.sql 2>/dev/null | tail -2"], cwd)
-    print(f"    migrations: {', '.join(os.path.basename(m) for m in migs.split()) or 'n/a'}")
+    if MIGRATIONS:
+        migs = sorted(glob.glob(os.path.join(cwd, MIGRATIONS)))[-2:]
+        print(f"    migrations: {', '.join(os.path.basename(m) for m in migs) or 'n/a'}")
 
     print("    — recent activity —")
     for role, kind, hint in tail_events(path, N):

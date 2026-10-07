@@ -9,6 +9,7 @@ Shape (spec §1 A2):
     goals:   [{id, text, proof}]
     lanes:   [{name, id, session, scope, worktree, branch,
                rig: {frontend, backend, db, project}}]
+    optional: pm_address, trunk, migrations (docs/program-yaml.md)
 
 The PM lane is the sole writer (`setup-delivery-program` at creation, or a PM edit for
 a respawn, a new lane or a rig change); anything may read it. Nothing enforces that yet
