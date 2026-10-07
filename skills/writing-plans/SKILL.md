@@ -275,7 +275,7 @@ Each step is one action of two to five minutes:
 - "Write failing test `T-AC-9: healthz returns 200 with body`"
 - "Run `T-AC-9` to verify it fails"
 - "Implement C16 (the `/healthz` route) to make `T-AC-9` pass"
-- "Run the tests and make sure they pass"
+- "Run `T-AC-9` and the test files this task touched; make sure they pass"
 - "Commit"
 
 ## Plan Document Header
@@ -477,7 +477,7 @@ Write it so it cannot be ticked from memory:
 
 ```
 - [ ] Base `<branch>` @ `<sha>` green: tsc 0 · tsc -p tsconfig.test.json 0 ·
-      complexity 239/239 · lint 0 new · tests 251 green   ← run these, paste the numbers
+      complexity 239/239 · lint 0 new · CI suite green (run 1234)   ← run the local gates, read CI's run on this SHA, paste the numbers
 ```
 
 1. **Enumerate every gate the CI runs, not the ones you remember.** A repo with two typecheck configs has two gates.

@@ -23,13 +23,20 @@ The full suite is CI's job; run it locally only when asked. Not evidence for thi
 a run on an earlier commit, a run before your last edit, an agent's or colleague's
 report, "CI was green yesterday".
 
+**Each claim has its scope, and the claim names it.** A task-level claim (done, fixed,
+this change passes) needs the scoped run, not the full suite: not per change, not per
+task, not per fix round. A PR-boundary claim (ready to merge, the suite is green) needs
+the full suite once on that SHA, which is CI's run, read and not assumed. Never say "all
+tests pass" from a scoped run: say what ran ("the 14 tests in `cart/` and the smoke set
+pass on a7c31f9; the full suite has not run on it").
+
 ## The gate
 
 1. **Identify** the command or CI check that proves the claim.
 2. **Run** it on this commit, or open CI's result for this SHA.
 3. **Read** all of it: exit code, failure count, which tests actually ran.
-4. **Claim** exactly what it shows, with the evidence (count, check name, SHA). If it
-   doesn't confirm the claim, report the actual state.
+4. **Claim** exactly what it shows, with the evidence (scope, count, check name, SHA).
+   If it doesn't confirm the claim, report the actual state.
 
 "Should pass", "probably", "seems to", "Done!" before step 3 are claims without evidence.
 
@@ -37,7 +44,8 @@ report, "CI was green yesterday".
 
 | Claim | Evidence | Not enough |
 |---|---|---|
-| Tests pass | test output: 0 failures, the expected tests ran | an earlier run, "should pass" |
+| Tests pass (this change) | scoped test output: 0 failures, the expected tests ran; the claim names the scope | an earlier run, "should pass", "all tests pass" from a scoped run |
+| Ready to merge / suite green | CI's full-suite run on this SHA, read | a scoped run, CI on an earlier SHA, "CI will pass" |
 | Lint clean | linter output: 0 errors | a partial check |
 | Build succeeds | build exits 0 | lint passing, logs look fine |
 | Bug fixed | the original symptom, reproduced, now gone | code changed |

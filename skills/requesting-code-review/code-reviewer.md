@@ -103,7 +103,7 @@ Task tool (general-purpose):
     - Tests verify real behavior, not mocks of the system under test?
     - A gap you find (an unproved edge, a surviving mutant) → "strengthen `<existing test>`"; request a new test only when none sits at the right altitude, and name its id
     - Net test growth explained — and lower tests a new higher one covers are deleted in this PR?
-    - All tests passing?
+    - Tests green on this SHA? Read the recorded gate line or CI's run; don't re-run the suite to find out.
     - **If frontend was touched** (any UI / page / route / asset file in the diff): a Playwright (or equivalent E2E) test exists that drives the browser AND asserts the back-end effect. Frontend unit tests against a mocked backend do NOT satisfy this — flag as Critical if missing.
     - A property test for each invariant the plan lists?
 
