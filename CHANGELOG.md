@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-10-07
+
+### Fixed
+- **`msg.py`** re-baselines the mailbox in the programme directory. It looked for `inbox/` and
+  `.pulse-state.json` beside the script, so run from the plugin it did nothing and
+  `ws-pulse-delta.py` reported every verified PM delivery as lane mail. (`FM-INBOX-PATH`)
+- **`ws-pulse.py`** reads the trunk and the migrations glob from the new optional `program.yaml`
+  fields `trunk` and `migrations` (`docs/program-yaml.md`) instead of Foundry's
+  `origin/feature/workbench` and `backend/drizzle`; unset, it says so rather than guess. A
+  programme's seeded copy in `.handover/` keeps the old text until the PM updates it. (`FM-PULSE-TRUNK`)
+- **`board-server.py`** serves `board.dir` from `program.yaml` (or `.handover/board` without one)
+  and refuses to start, naming the directory, when it is missing. The fallback to the retired
+  docs-submodule path is removed. (`FM-BOARD-DIR`)
+- **`spawn-lane.sh`** takes `--session <tmux-name>`, so a PM hosted in tmux session `pm` can host
+  its successor as `pm-<k+1>` in a fresh worktree; both guards still refuse an existing name and
+  an occupied directory. `respawn-pm` describes exactly that route. (`FM-PM-RESPAWN`)
+- **`ws-pulse.py` template** carries the PM id as a code line, `PM = "<session-uuid>"`, where
+  `reap-ghosts.sh` reads; it was a comment, so a PM resumed in a panel was not protected.
+  `respawn-pm` step 6 says to set it there. (`FM-PM-REAP`)
+- New `scripts/programme-scripts-check.sh`: one arm per failure mode above, each in a throwaway
+  programme with tmux, claude, gh, git, pgrep and ps stubbed.
+
 ## [1.11.0] - 2026-10-07
 
 Every skill re-read for contradictions, outdated steps and length (Heiko, 2026-10-07: "as concise,
