@@ -12,9 +12,9 @@ from program_root import program_dir as _pd, program_root as _pr, program_transc
 PROJ = _pt()
 ROOT = _pr()
 
-# reap-ghosts.sh spares only session ids on code lines of this file, never ids in comments.
-# Put the live PM session id on a code line, or the reaper treats the PM as a ghost:
-# PM = "<session-uuid>"
+# The live PM's session id. reap-ghosts.sh spares only ids on code lines of this file, so
+# replace the placeholder here, on this code line, and again on every PM respawn.
+PM = "<session-uuid>"
 WS = [
     # One row per live lane session; re-map the id when a lane is re-spawned:
     #     ("WS<n>-<k> <Lane title> — <plain-language scope>", "<session-uuid>", "<worktree>")
