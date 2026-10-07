@@ -17,6 +17,8 @@ board:
   dir: .handover/board
   port: 8794
 pm_address: swisper-foundry-b3      # the PM session's name in ListAgents
+trunk: origin/feature/workbench     # optional: the ref ws-pulse.py counts lane commits against
+migrations: backend/drizzle/00*.sql # optional: glob, per worktree; ws-pulse.py shows the last two
 
 goals:
   - id: G-1
@@ -38,7 +40,7 @@ lanes:
       project: foundry-ws5          # the compose project name
 ```
 
-Every field above is **required**, except the two addresses. A missing one is an
+Every field above is **required**, except the two addresses, `trunk` and `migrations`. A missing one is an
 error naming the field and the lane it belongs to — never a silent default,
 because a lane that half-exists is worse than one that does not.
 
@@ -48,6 +50,10 @@ are updated in the same edit as `session`. ⚠ **`program-yaml-check.py` does no
 yet require them:** making them required would fail every existing
 `program.yaml` at once. Until it does, a missing address is caught by nothing but
 the PM — see `skills/running-a-programme/references/messaging.md`.
+
+**`trunk` and `migrations` (optional, read by `ws-pulse.py`)**: without `trunk`, the
+pulse shows each lane's branch and says the trunk is unset instead of counting commits
+against a guessed one; without `migrations`, it shows no migrations line.
 
 ## Why YAML and not JSON
 
