@@ -401,7 +401,7 @@ For each spike in spec §7, write a real task with its timebox and stop conditio
 
 **Phase:** P[N] (must complete before C<dependent>)
 **Timebox:** 0.5 day
-**Stop condition:** confirmed yes (proceed) OR confirmed no (re-open the soft-fork question with evidence)
+**Stop condition:** confirmed yes (proceed) OR confirmed no (a goal changes, so re-open the soft-fork question with the user, with evidence)
 
 - [ ] **Step 1: Build a minimal plugin that mutates `output.options.thinking`**
 - [ ] **Step 2: Run one chat; capture the outbound request (debug logging or a proxy)**
@@ -409,7 +409,7 @@ For each spike in spec §7, write a real task with its timebox and stop conditio
 - [ ] **Step 4: Record the outcome** (Fintama: `specs/<product>/spikes/YYYY-MM-DD-S1-<slug>.md` in Swisper_Documentation, via `tools/docs-save`)
 
 Confirmed yes → downstream tasks proceed unchanged.
-Confirmed no → follow the spike's stop condition (here: stop and re-open the soft-fork question with the user).
+Confirmed no → if it changes a goal or the scope, stop and take it back to the user with the evidence; otherwise the lead amends the spec (§8 records the change) and carries on.
 ````
 
 ## Risk-Mitigation Tasks

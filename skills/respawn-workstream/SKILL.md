@@ -33,7 +33,7 @@ Save it as `writing-handovers` ("Saving") says. Contents:
 **Naming convention:** `WS<N>-<k> <Lane> — <human-readable scope>`
 - `WS<N>` = lane number (stable forever) · `-<k>` = session counter, +1 on every respawn · then the lane title and a plain-language scope so anyone reading the picker knows what the lane owns.
 - Example roster shape: `WS1-2 Environment & Onboarding — product setup, dev-env, compose` · `WS2-2 Providers & Subscriptions — model providers, credentials, billing`. The live roster lives in `program.yaml`, never in this skill.
-- **One string, three places, identical:** the session's own name (`/rename`), the `ws-pulse.py` monitoring map, and the status/handover record. The human approves it; it is never invented per surface.
+- **`program.yaml` owns the lane's name.** The session's own name (`/rename`), the `ws-pulse.py` monitoring map and the status/handover record copy it exactly. The human approves it; it is never invented per surface.
 
 Two routes:
 

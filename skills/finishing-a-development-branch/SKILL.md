@@ -83,8 +83,10 @@ Keep the options as they are, without added explanation.
 
 ### Option 1: Merge locally
 
-A merge into `main` needs the human's explicit OK for this merge. Choosing option 1
-right now, for this branch, is that OK; an earlier or general OK is not.
+A merge into `main` needs the human's explicit OK for this merge, asked separately
+after the options: name the branch and what the merge triggers (a deploy, a package
+publish with its version). Choosing option 1 from the list is not that OK, and an
+earlier or general OK is not either.
 
 ```bash
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
