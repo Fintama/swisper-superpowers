@@ -105,7 +105,7 @@ FOR multi-item feedback:
      - Simple fixes (typos, imports)
      - Complex fixes (refactoring, logic)
   3. Test each fix individually
-  4. Verify no regressions
+  4. Verify no regressions: re-run the tests covering the changed code (the full suite is CI's job)
 ```
 
 ## When To Push Back

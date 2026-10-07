@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-10-07
+
+### Changed
+- **Scoped tests per change, the full suite once per SHA** (Heiko, 2026-10-07; agents running whole
+  frontend suites after every change used up a colleague's weekly limit on a weak machine).
+  1.11.0 made the full suite CI's job; this closes the wordings that still read as "run everything":
+  verification-before-completion (a task-level claim needs the scoped run, a merge-readiness claim
+  needs CI's full run on that SHA, and a claim names its scope: never "all tests pass" from a scoped
+  run), test-driven-development REFACTOR (re-run the tests for the code you changed), writing-plans
+  (the example step and the base-branch line, whose suite result is CI's run),
+  requesting-code-review `code-reviewer.md` and receiving-code-review (read the recorded result or
+  re-run the covering tests; don't re-run the suite).
+
 ## [1.11.1] - 2026-10-07
 
 ### Fixed

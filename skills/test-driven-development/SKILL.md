@@ -177,7 +177,7 @@ Run the test you wrote, the existing tests for the module you changed (pass thei
 
 ### REFACTOR — Clean Up
 
-After green only: remove duplication, improve names, extract pure logic out of the shell. Keep tests green. Don't add behaviour.
+After green only: remove duplication, improve names, extract pure logic out of the shell. After each step re-run the tests for the code you changed (the Verify GREEN set, not the whole suite) and keep them green. Don't add behaviour.
 
 Then check every docstring and comment you added against [`clean-code.md`](clean-code.md).
 
