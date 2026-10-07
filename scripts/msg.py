@@ -86,9 +86,8 @@ def _rebaseline_inbox(lane: str, expected_size: int) -> None:
     it. A missed re-baseline costs one false positive; a swallowed write costs a message.
     """
     import json as _json, os as _os
-    here = _os.path.dirname(_os.path.abspath(__file__))
-    state = _os.path.join(here, ".pulse-state.json")
-    inbox = _os.path.join(here, "inbox", f"{lane}.md")
+    state = _os.path.join(ROOT, ".pulse-state.json")
+    inbox = _os.path.join(ROOT, "inbox", f"{lane}.md")
     try:
         if not (_os.path.exists(state) and _os.path.exists(inbox)):
             return
@@ -161,8 +160,7 @@ def send(lane, text):
         time.sleep(3)                        # let the TUI render the submitted prompt
         if pane_has(t, probe):
             import os as _os
-            _ib = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
-                                "inbox", f"{lane}.md")
+            _ib = _os.path.join(ROOT, "inbox", f"{lane}.md")
             _before = _os.path.getsize(_ib) if _os.path.exists(_ib) else 0
             to_inbox(lane, text, f"tmux — DELIVERY VERIFIED in pane (attempt {attempt})")
             _after = _os.path.getsize(_ib) if _os.path.exists(_ib) else 0
