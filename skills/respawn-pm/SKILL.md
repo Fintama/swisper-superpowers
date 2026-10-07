@@ -37,9 +37,11 @@ Two routes:
 
 **Hosted in tmux**, with the same script `respawn-workstream` uses (it pins the model, strips the inherited child-session marker, sends type and Enter separately, and asserts the cwd):
 ```bash
-bash "$CLAUDE_PLUGIN_ROOT/scripts/spawn-lane.sh" PM "Program Manager — coordination, routing, merges" <k+1> <directory>
+git -C <repo> worktree add --detach <repo>/.worktrees/pm-<k+1>
+bash "$CLAUDE_PLUGIN_ROOT/scripts/spawn-lane.sh" PM "Program Manager — coordination, routing, merges" <k+1> \
+  <repo>/.worktrees/pm-<k+1> --session pm-<k+1>
 ```
-This names the session `PM-<k+1> Program Manager — …` in tmux session `pm`. The script refuses (exit 70) a directory a live session already holds, and a tmux session `pm` that already exists. You are a live session, so give the successor a directory you do not hold; if the script refuses, use the panel route. Afterwards, as for a lane: send the one-line briefing pointing at the handover (type and Enter as separate `send-keys` calls), and verify the model from the transcript.
+The script refuses (exit 70) a directory a live session holds and a tmux session name that already exists, and you hold both: your own directory, and tmux session `pm` if you were hosted this way. So the successor gets its own worktree root (the first line) and its own tmux session, `pm-<k+1>`; without `--session` the tmux session is `pm`, which works only when none exists. The session is renamed `PM-<k+1> Program Manager — …`. If the script still refuses, use the panel route. Afterwards, as for a lane: send the one-line briefing pointing at the handover (type and Enter as separate `send-keys` calls, to `-t pm-<k+1>`), and verify the model from the transcript.
 
 **Panel**: tell the human: "PM context at <X>%, successor prep complete. Open a session, paste the last section of `<handover>`, then `/rename PM-<k+1> Program Manager …`".
 

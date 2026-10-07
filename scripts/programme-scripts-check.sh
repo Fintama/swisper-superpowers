@@ -146,7 +146,7 @@ if selected FM-PM-RESPAWN; then
     stub "$bin" claude 'printf "%s" "${AGENTS_JSON:-[]}"'
     # tmux: one existing session ($EXISTING, the current PM); new-session registers like Claude Code does.
     stub "$bin" tmux 'case "$1" in
-  has-session) [ "$3" = "$EXISTING" ] ;;
+  has-session) [ "$3" = "$EXISTING" ]; exit $? ;;
   new-session)
     echo "$*" >> "$SPAWN_LOG"
     while [ $# -gt 0 ]; do case "$1" in -s) name="$2"; shift ;; -c) dir="$2"; shift ;; esac; shift; done
@@ -166,9 +166,11 @@ exit 0'
     check "the successor's tmux session is named pm-2" has "$WORK/spawn-a.tmux" "-s pm-2"
     spawn "$WORK/spawn-b" pm '[]' PM "Program Manager" 2 "$wt"; rc=$?
     check "without --session an existing tmux 'pm' is still refused (exit 70, got $rc)" [ "$rc" -eq 70 ]
+    check "that refusal is guard 5, the existing tmux session" has "$WORK/spawn-b" "tmux session 'pm' already exists"
     spawn "$WORK/spawn-c" none "[{\"cwd\":\"$wt\",\"name\":\"PM-1\",\"pid\":1,\"kind\":\"interactive\"}]" \
         PM "Program Manager" 2 "$wt" --session pm-2; rc=$?
     check "a directory a live session holds is still refused with --session (exit 70, got $rc)" [ "$rc" -eq 70 ]
+    check "that refusal is guard 7, naming the occupant" has "$WORK/spawn-c" "occupant: PM-1"
 fi
 
 # ---- FM-PM-REAP: the PM id, filled in where the template says, is spared by the reaper ----
