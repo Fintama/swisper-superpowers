@@ -1,17 +1,9 @@
 #!/usr/bin/env bash
-# T-AC-7 — the positive control IS the acceptance criterion.
-#
-# divergence-check.sh guards the one thing this fork cannot afford to lose silently:
-# the local enhancements. So it is not enough that it passes. It must be shown to
-# FAIL, in both the ways it can be wrong:
-#
-#   arm 1  all markers present            -> green
-#   arm 2  one marker deleted             -> RED, and it NAMES the enhancement
-#   arm 3  the ledger emptied             -> RED, not a vacuous green
-#
-# Arm 3 is the one that matters. A predicate over an empty set is vacuously true, so
-# a checker handed an unparsed ledger reports success having verified nothing — and
-# that green is byte-identical to a real one.
+# Positive control for divergence-check.sh (T-AC-7): it must pass when right and fail when wrong.
+#   arm 1  all markers present  -> green, and it reports a marker count
+#   arm 2  one marker deleted   -> red, naming the enhancement
+#   arm 3  the ledger emptied   -> red, not a vacuous green
+# It mutates DIVERGENCE.md and one SKILL.md and restores them: don't run it while others edit.
 set -u
 cd "$(dirname "$0")/.." || exit 2
 CHECK=scripts/divergence-check.sh
@@ -40,7 +32,7 @@ restore() { cp "/tmp/div.$$.aside" "$LEDGER"; shasum -c "/tmp/div.$$.sha" >/dev/
 if bash "$CHECK" >/tmp/div.$$.a1 2>&1; then say PASS "arm 1: all markers present -> green"
 else say FAIL "arm 1: healthy ledger went RED"; sed 's/^/         /' /tmp/div.$$.a1; fi
 
-# it must also SAY how many it looked at — a count is what makes arm 3 possible
+# it must report how many it scanned, or arm 3 cannot be told from a real pass
 if /usr/bin/grep -qE '[0-9]+ marker' /tmp/div.$$.a1; then
   say PASS "arm 1: reports how many markers it scanned"
 else
@@ -52,8 +44,7 @@ victim=$(/usr/bin/grep -oE '^\| `[^`]+` \| `[^`]+`' "$LEDGER" | head -1 | sed 's
 if [ -z "$victim" ]; then
   say FAIL "arm 2: could not parse a marker out of the ledger to delete"
 else
-  # remove the marker from the SKILLS (not from the ledger) — that is the real defect:
-  # an enhancement silently lost while the ledger still claims it
+  # remove the marker from the skill, not the ledger: a lost enhancement the ledger still claims
   target=$(/usr/bin/grep -lF "$victim" skills/*/SKILL.md 2>/dev/null | head -1)
   if [ -z "$target" ]; then
     say FAIL "arm 2: the first ledger marker does not exist in any skill — the ledger already lies"
@@ -80,7 +71,7 @@ else
   fi
 fi
 
-# ---- ARM 3: empty the ledger. THE ARM THIS PROGRAMME KEEPS FINDING MISSING ----
+# ---- ARM 3: empty the ledger ----
 : > "$LEDGER"
 if [ -s "$LEDGER" ]; then say FAIL "arm 3: MUTATION DID NOT LAND — ledger is not empty"; else
   say PASS "arm 3: mutation landed (ledger emptied)"
@@ -92,7 +83,7 @@ if [ -s "$LEDGER" ]; then say FAIL "arm 3: MUTATION DID NOT LAND — ledger is n
 fi
 restore
 
-# ---- and the behaviour must come back, not merely the file ----
+# ---- the checker passes again after the restore ----
 if bash "$CHECK" >/dev/null 2>&1; then say PASS "post-restore: the BEHAVIOUR came back, not just the bytes"
 else say FAIL "post-restore: file restored but the checker still fails"; fi
 

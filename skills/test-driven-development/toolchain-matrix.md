@@ -1,19 +1,15 @@
 # Toolchain matrix — best-practice defaults per language (2025–2026)
 
 Look up the row for the stack you're building in. These are the widely-adopted,
-actively-maintained defaults a coding/QA agent should use unless the project
-already has an established (non-legacy) choice. The stage policy — which
-stage runs what — is below the matrix.
-
-Sources: verified via multi-source research (Vitest docs & State of JS 2025;
-BrowserStack Playwright-vs-Cypress; Ruff FAQ/Astral; JUnit 6.0 GA + Spring Boot 4;
-Stryker & Pact docs; modern-java-practices; OWASP). Re-check yearly — tooling moves.
+actively-maintained defaults; use them unless the project already has an
+established, non-legacy choice. The stage policy (which stage runs what) is
+below the matrix. Tooling moves: re-check the rows yearly.
 
 ## Master matrix
 
 | Concern | Java | TypeScript (Node) | React | Python |
 |---|---|---|---|---|
-| **Unit / integration** | JUnit 6 *(JUnit 5 for existing; **JUnit 4 = legacy**)* + AssertJ + Mockito 5 + **Testcontainers** | **Vitest** *(**Jest = legacy**, keep for React-Native)* + Supertest + Testcontainers | **Vitest** + React Testing Library | **pytest** (+ fixtures, httpx) + Testcontainers-python |
+| **Unit / integration** | JUnit 6 *(JUnit 5 for existing; **JUnit 4 = legacy**)* + AssertJ + Mockito 5 + **Testcontainers** | **Vitest** *(Jest for existing suites and React-Native)* + Supertest + Testcontainers | **Vitest** + React Testing Library | **pytest** (+ fixtures, httpx) + Testcontainers-python |
 | **End-to-end** | **Playwright** | **Playwright** | **Playwright** *(Cypress = conditional: quick setup / component-test maturity)* | **Playwright** (Python) |
 | **Contract** | **Pact** (V4 = HTTP + async) | Pact | — | Pact |
 | **Property-based** | jqwik | **fast-check** | fast-check | **Hypothesis** |
@@ -25,14 +21,9 @@ Stryker & Pact docs; modern-java-practices; OWASP). Re-check yearly — tooling 
 | **Dependency scan (SCA)** | OWASP Dependency-Check | **Dependabot** / OSV-Scanner / Trivy / `npm audit` | (same as TS) | **pip-audit** / Dependabot / OSV |
 | **Secrets** | **gitleaks** (or trufflehog) | gitleaks | gitleaks | gitleaks |
 
+Notes: JUnit 6 needs Java 17+ (the Spring Boot 4 default); use JUnit 5 on Java 8–16. Jest is not deprecated (Jest 30), but Vitest is the default for new JS/TS/React work. Cypress is still maintained (strong component testing, local debugging); Playwright is the default for cross-browser and CI scale. Biome vs ESLint + Prettier is a toss-up: Biome is one fast tool with auto-migration, ESLint + Prettier has the larger plugin ecosystem.
+
 Cross-stack engines: **Semgrep** and **CodeQL** cover most languages; **Trivy** covers deps + containers + IaC; **Dependabot** is the GitHub-native SCA default. Container/IaC: Trivy, Checkov, hadolint. Reference standard for the security review: **OWASP Top-10 + OWASP ASVS**.
-
-## "Tell the agent" one-liners
-
-- **Java:** JUnit 6 + AssertJ + Mockito 5 + Testcontainers; Playwright for E2E; Spotless + Checkstyle/PMD/SpotBugs; Find Security Bugs + CodeQL + OWASP Dependency-Check. *(JUnit 6 needs Java 17+; it's the Spring Boot 4 default. Use JUnit 5 if the project is Java 8–16.)*
-- **TypeScript (Node):** Vitest (+ Supertest) + Testcontainers; Playwright for E2E; Biome (or ESLint+Prettier); tsc; Semgrep/CodeQL + Dependabot + gitleaks.
-- **React:** Vitest + React Testing Library for component/unit; Playwright for E2E; same lint/type/security as TS.
-- **Python:** pytest (+ Hypothesis for invariants) + Testcontainers-python; Playwright(Python) for E2E; **Ruff** (lint+format) + mypy/pyright; Bandit + Semgrep + pip-audit + gitleaks.
 
 ## Standard test types (what to run, all stacks)
 
@@ -49,7 +40,7 @@ boundary cannot reach the case. This list is the toolbox, not a quota.
 - **Performance NFRs** — a benchmark compared to a committed baseline (a regression check, not an assertion).
 - **Contract** — **Pact**, consumer-driven, for multi-service boundaries; gate deploys with `can-i-deploy`.
 - **Property-based** — invariants across generated inputs (fast-check / Hypothesis / jqwik).
-- **Mutation** — validates the *suite's* effectiveness; run tiered (changed-files on PR via `--since`, full sweep on a weekly cron), not on every commit. **Always** for invariant-critical code (security boundaries, billing, FSM transitions); skip for CRUD glue — it returns noise there. A survivor is answered by **strengthening** the test that claims the behaviour (`SKILL.md` R6), not by a new test.
+- **Mutation** — validates the *suite's* effectiveness; run tiered (changed-files on PR via `--since`, full sweep on a weekly cron), not on every commit. Always for invariant-critical code (security boundaries, billing, FSM transitions); skip for CRUD glue — it returns noise there. A survivor is answered by **strengthening** the test that claims the behaviour (`SKILL.md` R6), not by a new test.
 
 ## Contract tests — across the consumer boundary
 
@@ -80,12 +71,4 @@ Each stage is a strictly cheaper filter than the next; a check runs as early as 
 
 ## Coverage
 
-Coverage is an **outcome, not a target** — chasing a % breeds assertion-free tests. A common floor is ~80% line/branch, but treat it as a smell detector (what's *untested*), never a goal to game. The lean, behavioral, AC-traceable suite (see `SKILL.md`) is what produces good coverage.
-
-## Legacy / deprecation flags
-
-- **Jest** → not deprecated (Jest 30, huge install base) but **Vitest is the default for new JS/TS/React**; keep Jest for React-Native or existing Jest suites.
-- **JUnit 4** → legacy; **JUnit 5/6** for new work.
-- **flake8 + black + isort** → superseded by **Ruff** (one tool, ~10–100× faster).
-- **Cypress** → still GA/maintained (strong component testing, local debugging) but **Playwright is the default E2E recommendation** for cross-browser + CI scale.
-- **Biome vs ESLint+Prettier** → genuinely a toss-up; Biome = one fast tool with auto-migration; ESLint+Prettier = larger plugin ecosystem. Either is an acceptable default.
+Coverage is an outcome, not a target (`SKILL.md`). A common floor is ~80% line/branch; treat it as a smell detector for what is untested.

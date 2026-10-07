@@ -1,26 +1,17 @@
 # Defense-in-Depth Validation
 
-## Overview
+A bug caused by invalid data is fixed at its source (`root-cause-tracing.md`). One check
+there can still be bypassed later by another code path, a refactor or a mock.
 
-When you fix a bug caused by invalid data, adding validation at one place feels sufficient. But that single check can be bypassed by different code paths, refactoring, or mocks.
+**Validate at the trust boundaries and at the layer that does the damage.** A trust
+boundary is where data arrives from something you don't control: an API request, user
+input, a file, another service, test setup. The damage layer is the operation that
+writes, deletes, executes or spends. Layers in between that only pass the value on
+don't repeat the check.
 
-**Core principle:** Validate at EVERY layer data passes through. Make the bug structurally impossible.
+## The checks
 
-## Why Multiple Layers
-
-Single validation: "We fixed the bug"
-Multiple layers: "We made the bug impossible"
-
-Different layers catch different cases:
-- Entry validation catches most bugs
-- Business logic catches edge cases
-- Environment guards prevent context-specific dangers
-- Debug logging helps when other layers fail
-
-## The Four Layers
-
-### Layer 1: Entry Point Validation
-**Purpose:** Reject obviously invalid input at API boundary
+### At the trust boundary: reject bad input
 
 ```typescript
 function createProject(name: string, workingDirectory: string) {
@@ -37,86 +28,67 @@ function createProject(name: string, workingDirectory: string) {
 }
 ```
 
-### Layer 2: Business Logic Validation
-**Purpose:** Ensure data makes sense for this operation
+### At the damage layer: refuse the dangerous operation
+
+The operation checks its own precondition, so no caller can skip it:
 
 ```typescript
-function initializeWorkspace(projectDir: string, sessionId: string) {
-  if (!projectDir) {
-    throw new Error('projectDir required for workspace initialization');
+async function gitInit(directory: string) {
+  if (!directory) {
+    throw new Error('gitInit needs a directory; an empty one means process.cwd()');
   }
   // ... proceed
 }
 ```
 
-### Layer 3: Environment Guards
-**Purpose:** Prevent dangerous operations in specific contexts
+A guard that only some contexts need (tests may run `git init` only inside the temp
+directory) is **injected**, never chosen by checking the environment in production code
+(`../test-driven-development/testing-anti-patterns.md`, Anti-Pattern 8):
 
 ```typescript
-async function gitInit(directory: string) {
-  // In tests, refuse git init outside temp directories
-  if (process.env.NODE_ENV === 'test') {
-    const normalized = normalize(resolve(directory));
-    const tmpDir = normalize(resolve(tmpdir()));
+type DirectoryGuard = (directory: string) => void;
 
-    if (!normalized.startsWith(tmpDir)) {
-      throw new Error(
-        `Refusing git init outside temp dir during tests: ${directory}`
-      );
-    }
+export const insideTmpdir: DirectoryGuard = (directory) => {
+  if (!normalize(resolve(directory)).startsWith(normalize(resolve(tmpdir())))) {
+    throw new Error(`Refusing git init outside the temp dir: ${directory}`);
   }
-  // ... proceed
+};
+
+class WorktreeManager {
+  constructor(private readonly guardDirectory: DirectoryGuard = () => {}) {}
+
+  async gitInit(directory: string) {
+    this.guardDirectory(directory);
+    // ... proceed
+  }
 }
+
+// Test setup
+const manager = new WorktreeManager(insideTmpdir);
 ```
 
-### Layer 4: Debug Instrumentation
-**Purpose:** Capture context for forensics
+### Before the damage layer: evidence for next time
 
 ```typescript
-async function gitInit(directory: string) {
-  const stack = new Error().stack;
-  logger.debug('About to git init', {
-    directory,
-    cwd: process.cwd(),
-    stack,
-  });
-  // ... proceed
-}
+logger.debug('About to git init', { directory, cwd: process.cwd(), stack: new Error().stack });
 ```
 
-## Applying the Pattern
+## Applying it
 
-When you find a bug:
+1. Trace where the bad value came from and where it does harm.
+2. Mark the trust boundaries it crossed and the operation that did the damage.
+3. Add the check at each of those, and the injected guard if a context needs one.
+4. Test each check by getting past the one before it (call the damage layer directly
+   with the bad value) and confirm it refuses.
 
-1. **Trace the data flow** - Where does bad value originate? Where used?
-2. **Map all checkpoints** - List every point data passes through
-3. **Add validation at each layer** - Entry, business, environment, debug
-4. **Test each layer** - Try to bypass layer 1, verify layer 2 catches it
+## Example
 
-## Example from Session
+Bug: an empty `projectDir` made `git init` run in the source tree.
 
-Bug: Empty `projectDir` caused `git init` in source code
+- Trust boundary: `Project.create()` rejects an empty, missing or non-directory path.
+- Damage layer: `gitInit` refuses an empty directory.
+- Injected guard: tests construct `WorktreeManager(insideTmpdir)`, so a test can never
+  initialise a repo outside the temp dir.
+- Debug log before `git init`.
 
-**Data flow:**
-1. Test setup → empty string
-2. `Project.create(name, '')`
-3. `WorkspaceManager.createWorkspace('')`
-4. `git init` runs in `process.cwd()`
-
-**Four layers added:**
-- Layer 1: `Project.create()` validates not empty/exists/writable
-- Layer 2: `WorkspaceManager` validates projectDir not empty
-- Layer 3: `WorktreeManager` refuses git init outside tmpdir in tests
-- Layer 4: Stack trace logging before git init
-
-**Result:** All 1847 tests passed, bug impossible to reproduce
-
-## Key Insight
-
-All four layers were necessary. During testing, each layer caught bugs the others missed:
-- Different code paths bypassed entry validation
-- Mocks bypassed business logic checks
-- Edge cases on different platforms needed environment guards
-- Debug logging identified structural misuse
-
-**Don't stop at one validation point.** Add checks at every layer.
+The intermediate `WorkspaceManager` only passes the path on, so it gets no check of its own.

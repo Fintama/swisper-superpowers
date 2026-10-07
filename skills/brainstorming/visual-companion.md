@@ -1,6 +1,10 @@
 # Visual Companion Guide
 
-Browser-based visual brainstorming companion for showing mockups, diagrams, and options.
+Browser-based visual brainstorming companion for showing diagrams, flows and visual options.
+
+It answers questions; it never designs a real screen. A user-visible surface's design is a
+React mock from `creating-screen-mocks`, and a companion page is never handed to an
+implementer as one.
 
 ## When to Use
 
@@ -8,10 +12,9 @@ Decide per-question, not per-session. The test: **would the user understand this
 
 **Use the browser** when the content itself is visual:
 
-- **UI mockups** — wireframes, layouts, navigation structures, component designs
+- **Rough layout options** — two or three arrangements to settle a direction question before a mock exists
 - **Architecture diagrams** — system components, data flow, relationship maps
 - **Side-by-side visual comparisons** — comparing two layouts, two color schemes, two design directions
-- **Design polish** — when the question is about look and feel, spacing, visual hierarchy
 - **Spatial relationships** — state machines, flowcharts, entity relationships rendered as diagrams
 
 **Use the terminal** when the content is text or tabular:
@@ -259,7 +262,7 @@ If `$STATE_DIR/events` doesn't exist, the user didn't interact with the browser 
 
 ## Design Tips
 
-- **Scale fidelity to the question** — wireframes for layout, polish for polish questions
+- **Scale fidelity to the question** — rough is enough to settle a direction; a screen's polish belongs in its mock
 - **Explain the question on each page** — "Which layout feels more professional?" not just "Pick one"
 - **Iterate before advancing** — if feedback changes current screen, write a new version
 - **2-4 options max** per screen

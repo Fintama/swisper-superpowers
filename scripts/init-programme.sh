@@ -1,22 +1,12 @@
 #!/usr/bin/env bash
-# init-programme.sh — create a programme's state directory and seed the files
-# that belong to the PROGRAMME rather than to the plugin.
+# Create a programme's state directory and seed the files the programme owns.
 #
-# The split this script exists to serve:
+# Stateless tools run from the plugin (`python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" …`).
+# The lane map (`ws-pulse.py`'s WS list) is edited by the PM on every succession, so it
+# lives in $PROGRAM_DIR, where a plugin update cannot overwrite it; reap-ghosts.sh and
+# ctx-check.py read it there.
 #
-#   THE PLUGIN owns the stateless tools. Run them from where they are installed
-#   — `python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" …`. They take the programme
-#   as a parameter, hold no programme state, and are replaced on every update.
-#
-#   THE PROGRAMME owns its lane map. `ws-pulse.py` carries the WS list — which
-#   sessions are live, under which names — and the PM edits it on every
-#   succession. It therefore CANNOT live in the plugin cache: an update would
-#   overwrite the roster. `reap-ghosts.sh` reads it from $PROGRAM_DIR by design
-#   and aborts when it is missing, which is the failure this script prevents.
-#
-# Idempotent. It NEVER overwrites an existing lane map — that file is the live
-# roster, and clobbering it would make the monitoring watch dead sessions while
-# reporting success.
+# Idempotent: an existing lane map is never overwritten, because it is the live roster.
 #
 # Usage:
 #   bash "$CLAUDE_PLUGIN_ROOT/scripts/init-programme.sh" [program-root]
@@ -49,7 +39,7 @@ mk() {  # mk <path> <what-it-is>
 mkdir -p "$PROGRAM_DIR/inbox" "$PROGRAM_DIR/logs"
 echo "  ensured inbox/ and logs/"
 
-# The lane map — programme data. Seeded from the plugin's template ONCE.
+# The lane map, seeded from the plugin's template once.
 for f in ws-pulse.py ws-pulse-delta.py; do
     if mk "$PROGRAM_DIR/$f" "$f"; then
         cp "$HERE/$f" "$PROGRAM_DIR/$f"
@@ -59,10 +49,7 @@ for f in ws-pulse.py ws-pulse-delta.py; do
     fi
 done
 
-# The modules those two import. They must sit BESIDE the copy, not in the plugin:
-# ws-pulse.py does `from program_root import …`, which resolves against its own
-# directory. Without them the programme copy dies with ModuleNotFoundError — and
-# it does so only after the map has been edited, which is the worst moment.
+# ws-pulse.py imports program_root from its own directory, so its imports go beside the copy.
 for f in program_root.py program_yaml.py; do
     if [ ! -f "$PROGRAM_DIR/$f" ]; then
         cp "$HERE/$f" "$PROGRAM_DIR/$f"
@@ -84,7 +71,7 @@ fi
 echo
 echo "created $created, kept $kept."
 
-# A summary that can DISAGREE with us: re-read the disk rather than assert.
+# Re-read the disk rather than trust the counters above.
 missing=0
 for f in ws-pulse.py ws-pulse-delta.py program_root.py program_yaml.py outbox-to-pm.md; do
     [ -f "$PROGRAM_DIR/$f" ] || { echo "STILL MISSING: $PROGRAM_DIR/$f"; missing=$((missing + 1)); }
@@ -96,9 +83,7 @@ if [ "$missing" -gt 0 ]; then
     exit 1
 fi
 
-# Presence is not function. The seeded copy imports program_root from its own
-# directory, so the only proof that the seeding worked is running it — a file
-# list would look identical whether or not the import resolves.
+# Run the seeded copy: only that proves its imports resolve.
 if ! PROGRAM_ROOT="$PROGRAM_ROOT" python3 "$PROGRAM_DIR/ws-pulse.py" 1 >/dev/null 2>&1; then
     echo "FAIL — the seeded ws-pulse.py does not run. Output:"
     PROGRAM_ROOT="$PROGRAM_ROOT" python3 "$PROGRAM_DIR/ws-pulse.py" 1 2>&1 | tail -5 | sed 's/^/    /'

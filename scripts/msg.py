@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""msg — the OFFLINE mailbox and the record. NOT the live channel (since 2026-10-01).
+"""msg: the offline mailbox and the record. Not the live channel.
 
   MSG_SENDER=PM python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" WS4 'your message'
   MSG_SENDER=PM python3 "$CLAUDE_PLUGIN_ROOT/scripts/msg.py" all  'broadcast'
@@ -11,58 +11,33 @@ for a session that is NOT running: a built-in message to one is lost, and the
 mailbox `.handover/inbox/WS<n>.md` is what its respawned successor reads at start.
 Rules: skills/running-a-programme/references/messaging.md.
 
-Behaviour is unchanged from the tmux era: if a tmux session named ws<n> exists, the
-message is still TYPED INTO it and verified by reading the pane back; otherwise it
-is appended to the mailbox. Either way the mailbox gets a copy.
-
-That copy is written by the SENDER, so it is an audit trail — never evidence that
-the lane received anything. Read the exit line, not the mirror.
+If a tmux session named ws<n> exists, the message is typed into it and verified by
+reading the pane back; otherwise it is appended to the mailbox. Either way the mailbox
+gets a copy. The sender writes that copy, so it is an audit trail, never evidence that
+the lane received anything: read the exit line, not the mirror.
 """
 import subprocess, sys, time, os
 
 import sys as _s, pathlib as _p
 _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
 from program_root import program_dir as _pd, program_root as _pr
-ROOT = _pd()          # C2: was dirname(__file__) — the programme is now a parameter
-# Sender attribution (2026-07-28): every mirror header before this date says "PM message"
-# REGARDLESS of who ran the script — those headers prove transit through this tool, never
-# authorship. Set MSG_SENDER when sending; an unset sender is stamped UNATTRIBUTED so the
-# gap is visible instead of impersonating the PM.
+ROOT = _pd()
+# Set MSG_SENDER when sending; an unset sender is stamped UNATTRIBUTED, visibly, rather than
+# passing as the PM.
 SENDER = os.environ.get("MSG_SENDER", "UNATTRIBUTED")
 
-# Session identity (C1, 2026-08-27). SENDER says WHO; SESSION says WHICH INCARNATION,
-# and that is the difference that makes a fork visible: two sessions wearing the same
-# lane label are indistinguishable by SENDER alone, and that IS the fork.
-#
-# 🔴 SESSION DEFAULTS TO ABSENT, NOT TO A PLACEHOLDER, and this deliberately INVERTS
-# the SENDER convention four lines above. SENDER falls back to "UNATTRIBUTED" so a
-# missing sender is VISIBLE. SESSION must not do that: §2 RULE-1 rejects a message
-# whose session field is ABSENT ("an OLD sender, or something that is not our
-# machinery — NOT 'probably fine'"), and a literal placeholder is a field that is
-# PRESENT. It would sail past rule 1, then fail to match the roster, and be reported
-# as a FORK — a false fork on every unattributed message, which is the one outcome
-# that would teach everyone to ignore fork reports.
-#
-# The corollary is what makes the change safe: with MSG_SESSION unset, every byte
-# this tool emits is exactly what it emitted before C1. T-AC-3 asserts that.
+# SESSION names which incarnation of a lane sent the message, which is what makes a fork
+# (two sessions with one label) visible. Unlike SENDER it defaults to absent, not to a
+# placeholder: the receiver rejects a message with no session field, but a placeholder is
+# present, fails to match the roster and would be reported as a false fork. With
+# MSG_SESSION unset the output is byte-identical to the pre-session format (T-AC-3).
 SESSION = os.environ.get("MSG_SESSION") or None
 def lanes():
-    """The roster, DERIVED from program.yaml — never a typed copy.
+    """The lane roster, derived from program.yaml. Raises if it cannot be read.
 
-    It was a hand-typed list until 2026-09-12, and it had gone stale: WS7 was
-    registered in program.yaml and absent here, so `msg.py all` reached six of seven
-    lanes AND REPORTED SUCCESS FOR EACH ONE IT TRIED. A broadcast that silently omits
-    a lane is worse than no broadcast, because the sender believes everyone was told.
-    Registering a lane is now the only act needed to make it reachable.
-
-    🔴 NO SILENT FALLBACK. If the registry cannot be read this RAISES, and the caller
-    refuses. Falling back to a stale literal is the original bug wearing a hat: the
-    bus would keep messaging a set that quietly stopped matching the programme. Same
-    idiom as program_root.py, which refuses to guess a root rather than read another
-    programme's mailbox.
-
-    Called LAZILY, only by --status and by the `all` broadcast. A NAMED target must
-    keep working when the registry is broken — that path never touches this.
+    No fallback list: a broadcast over a stale roster silently omits lanes while
+    reporting success for each one it tried. Only --status and `all` call this, so a
+    named target still works when program.yaml is broken.
     """
     from program_yaml import load          # sibling; sys.path was extended above
     data = load(f"{_pr()}/program.yaml")
@@ -70,12 +45,7 @@ def lanes():
 
 
 def _next_seq(lane):
-    """Monotonic per (session, lane). Detects a GAP, which a bare counter cannot.
-
-    Sequence is what separates "I have not heard from WS3" from "WS3's messages are
-    not arriving": a receiver that sees seq 4 then seq 6 knows a message was lost,
-    where two unnumbered messages look like one quiet lane.
-    """
+    """Monotonic per (session, lane), so a receiver that sees seq 4 then 6 knows one was lost."""
     if SESSION is None:
         return None
     if os.environ.get("MSG_SEQ"):
@@ -106,30 +76,14 @@ def _identity(lane):
 
 
 
-# ── Keep the delta instrument from waking the PM with its own echo ──────────
-# A PM write GROWS the lane's inbox file, which ws-pulse-delta.py then reports
-# as "MAILBOX WSn grew — a WS consumed or PM wrote". That is a FALSE POSITIVE:
-# the PM is being signalled by its own message. False positives erode a silence
-# detector faster than misses do, because the reader learns to skim it.
-#
-# After a VERIFIED delivery, re-baseline just this mailbox's recorded size so
-# the next delta reports only what a LANE did. Any other key is left untouched,
-# so a genuine change elsewhere is still caught.
+# After a verified delivery, re-baseline this mailbox's recorded size, so ws-pulse-delta.py
+# does not report the PM's own write back to it as lane activity.
 def _rebaseline_inbox(lane: str, expected_size: int) -> None:
-    """Re-baseline ONLY this mailbox, and ONLY if nobody else wrote to it.
+    """Re-baseline this mailbox only, and only if nobody else wrote to it.
 
-    WS6's race, 2026-07-29: re-baselining to the file's size AFTER our write
-    silently absorbs anything that landed in the window between the write and
-    the re-baseline — that write would then never be reported as a delta.
-    Today the window is empty by construction (only the PM writes here), but a
-    second PM instance, or a lane writing to another lane's inbox, would be
-    swallowed without trace.
-
-    So we re-baseline to the size we EXPECT (size observed before our write,
-    plus the bytes we wrote). If the file is a different size, someone else
-    wrote too — leave the old baseline alone so the delta check still reports
-    it. A missed re-baseline costs one false positive; a swallowed write costs
-    a real message.
+    The baseline is set to the size we expect (before our write plus our bytes). If the
+    file differs, someone else wrote too: leave the baseline so the delta still reports
+    it. A missed re-baseline costs one false positive; a swallowed write costs a message.
     """
     import json as _json, os as _os
     here = _os.path.dirname(_os.path.abspath(__file__))
@@ -175,13 +129,10 @@ def pane_has(lane, needle, lines=200):
 
 
 def send(lane, text):
-    """Type into a hosted lane, then VERIFY the session actually received it.
+    """Type into a hosted lane, then verify the message appears in its pane.
 
-    'send-keys succeeded' only means keystrokes were handed to the terminal. A busy
-    session redraws constantly (spinner, token counts, subagent rows), and a redraw
-    between the text and the Enter can wipe the input line — the message is then lost
-    with no error anywhere. That happened to WS6 on 2026-07-28 and was only caught
-    because Heiko asked the lane directly. Never report delivery you have not checked.
+    A successful send-keys only means the terminal got keystrokes: a busy session's
+    redraw between the text and Enter can wipe the input line with no error anywhere.
     """
     if not hosted(lane):
         to_inbox(lane, text, "inbox — read on your next poll")
@@ -193,15 +144,8 @@ def send(lane, text):
         # Type, pause, then Enter — a combined send-keys leaves the text unsubmitted.
         payload = f"[{SENDER} message{_identity(lane)}] {text}"
         subprocess.run(["tmux", "send-keys", "-t", t, payload], check=True)
-        # SETTLE PROPORTIONAL TO LENGTH (PM-3, 2026-07-29 — WS6 diagnosed this).
-        # A fixed 2s was fine for short messages and WRONG for long ones: tmux hands
-        # a long payload to the pane over time, so Enter fired while the tail was
-        # still arriving — the bulk submitted and the REMAINDER stranded in the now
-        # empty input line. WS6 found a verbatim fragment of a PM message sitting at
-        # its own prompt and correctly identified it as the PM's, not its own. The
-        # lane still RECEIVED the message, so nothing was lost — but the stranded
-        # tail then blocks that lane silently (rule 31's class), and it defeats both
-        # instruments at once: no tokens emitted, and nothing "changed" to detect.
+        # Wait in proportion to length: tmux delivers a long payload over time, and an
+        # early Enter submits the bulk and strands the tail at the prompt.
         time.sleep(2 + len(payload) / 600.0)
         subprocess.run(["tmux", "send-keys", "-t", t, "Enter"], check=True)
         time.sleep(1)
@@ -237,7 +181,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--status":
         try:
             roster = lanes()
-        except Exception as e:                       # HC-2: refuse, never a stale list
+        except Exception as e:                       # refuse, never a stale list
             print(f"REFUSED: cannot read the lane roster from {_pr()}/program.yaml — {e}\n"
                   "The roster is derived, so a broken registry means the channel map is "
                   "unknown, not 'the last six lanes'. Fix program.yaml and re-run; a NAMED "
@@ -250,10 +194,8 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(1)
     target, text = sys.argv[1], " ".join(sys.argv[2:])
-    # Backtick guard (2026-07-28, after the PM garbled two messages in one day): by the time
-    # Python sees a backtick the shell has usually ALREADY substituted it away — but a literal
-    # backtick that survives (single-quoted sender) would garble on some receiving shells too,
-    # and refusing here is the only place a guard can live. Spell commands in plain words.
+    # Refuse shell-active spans: the shell has usually substituted them already, and one
+    # that survives would garble on the receiving side.
     if any(tok in text for tok in ("`", "$(", "${")):
         print("REFUSED: message contains a shell-active span (backtick, dollar-paren or "
               "dollar-brace). The bus rides a shell — these execute or blank out before "
@@ -263,13 +205,13 @@ if __name__ == "__main__":
     if target.lower() == "all":
         try:
             targets = lanes()                        # derived; see lanes() for why no fallback
-        except Exception as e:                       # HC-2
+        except Exception as e:
             print(f"REFUSED: cannot read the lane roster from {_pr()}/program.yaml — {e}\n"
                   "A broadcast over a roster we cannot read would silently omit lanes, which "
                   "is the exact defect this derivation removed. Address the lane by name to "
                   "send now, and fix program.yaml before broadcasting.")
             sys.exit(1)
     else:
-        targets = [target.upper()]                   # PIN: never routed through the roster
+        targets = [target.upper()]                   # a named target never goes through the roster
     for l in targets:
         print(send(l, text))

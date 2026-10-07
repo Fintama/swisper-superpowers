@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""PM workstream pulse — passive monitor of the 4 live workstream sessions.
+"""PM workstream pulse: each live lane's recent transcript events and worktree git state. Read-only.
 
-Reads each session's transcript tail + its worktree git state. Read-only.
 Usage:  python3 ws-pulse.py [n_recent_events]
 """
 import json, os, re, subprocess, sys, time
@@ -10,25 +9,19 @@ import sys as _s, pathlib as _p
 _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
 from program_root import program_dir as _pd, program_root as _pr, program_transcripts as _pt
 
-PROJ = _pt()          # 🔴 C2/HC-2: was a hard-coded, USER-specific absolute path
-ROOT = _pr()          # 🔴 C2/HC-2: was a HARD-CODED absolute Foundry path
+PROJ = _pt()
+ROOT = _pr()
 
-# Sessions are re-spawned when they exhaust context — re-map the id when that happens.
-# PM SESSION (NOT a lane, but NEVER reap — reap-ghosts.sh whitelists by grep on this file):
-# PM = <session-uuid>   (tmux "pm")   <- put the live PM id here
+# reap-ghosts.sh spares only session ids on code lines of this file, never ids in comments.
+# Put the live PM session id on a code line, or the reaper treats the PM as a ghost:
+# PM = "<session-uuid>"
 WS = [
-    # ── LANE MAP ──────────────────────────────────────────────────────────────
-    # One row per live workstream session:
+    # One row per live lane session; re-map the id when a lane is re-spawned:
     #     ("WS<n>-<k> <Lane title> — <plain-language scope>", "<session-uuid>", "<worktree>")
-    #
-    # The session uuid is the filename (minus .jsonl) of the lane's transcript in
-    # ~/.claude/projects/<project>/. Find a new one with:
-    #     ls -t ~/.claude/projects/<project>/*.jsonl | head
-    #
-    # Keep the label byte-identical to the session's own /rename and to the
-    # status file — one string, three places (see the respawn-workstream skill).
-    # Comment a retired row rather than deleting it; the history is how you tell
-    # a succession from a fork.
+    # The uuid is the transcript's filename without .jsonl: ls -t ~/.claude/projects/<project>/*.jsonl | head
+    # Take the label from the lane's entry in program.yaml, and use the same string for the
+    # session's /rename and its status record.
+    # Comment out a retired row rather than deleting it; it tells a succession from a fork.
     #
     # ("WS1-1 Example Lane — what this lane owns", "00000000-0000-0000-0000-000000000000", "main"),
 ]
@@ -102,8 +95,7 @@ print(f"\n{'='*78}\nWORKSTREAM PULSE — {time.strftime('%Y-%m-%d %H:%M:%S')}\n{
 for label, sid, wt_default in WS:
     path = f"{PROJ}/{sid}.jsonl"
     wt = live_worktree(path, wt_default)
-    # A lane without a worktree (e.g. WS5 docs — works inside the docs submodule)
-    # is monitored at that path directly; "docs" means ROOT/docs, not .worktrees/docs.
+    # A lane whose worktree is "docs" works in ROOT/docs, not in .worktrees/docs.
     cwd = f"{ROOT}/docs" if wt == "docs" else f"{ROOT}/.worktrees/{wt}"
     age = (time.time() - os.path.getmtime(path)) / 60 if os.path.exists(path) else -1
     live = "🟢 LIVE" if age < 3 else ("🟡 idle" if age < 20 else "⚪ quiet")

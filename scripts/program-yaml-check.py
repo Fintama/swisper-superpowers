@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """T-AC-2 — program.yaml round-trips: every field read back equals what was written.
 
-`observed_at` is THE FILE ON DISK, per the AC. An in-memory comparison would pass
-even if the writer never flushed, so every assertion here re-reads the file.
+Every assertion re-reads the file on disk; an in-memory comparison passes even if
+the writer never flushed.
 
 Run:  python3 scripts/program-yaml-check.py
 Exit: 0 all arms pass · 1 an arm failed · 2 the checker itself could not run
@@ -60,10 +60,8 @@ def main():
         path = Path(d) / "program.yaml"
 
         # ---- ARM 1: the round trip, read back FROM DISK ----
-        # Wrapped, because a REAL defect here raises rather than returning a wrong
-        # value — and an uncaught raise aborts the run, so the later arms never
-        # report and the operator gets a traceback instead of a verdict. Found by
-        # sabotaging dump() and watching this checker crash instead of failing.
+        # Wrapped: a real defect here raises, and an uncaught raise would skip the
+        # later arms and print a traceback instead of a verdict.
         try:
             dump(FIXTURE, path)
             check("the writer actually created a file", path.exists())
@@ -72,8 +70,7 @@ def main():
             check("every field read back equals what was written", back == FIXTURE,
                   f"differs: {[k for k in FIXTURE if back.get(k) != FIXTURE[k]]}")
 
-            # a nested value, named explicitly — a top-level dict compare can pass
-            # while a reader that flattens nested keys is broken for its consumers
+            # a nested value, named: a top-level compare passes a reader that flattens nested keys
             check("nested board.port survives as an int, not a string",
                   back["board"]["port"] == 8794 and isinstance(back["board"]["port"], int),
                   f"got {back['board']['port']!r}")
@@ -85,11 +82,8 @@ def main():
             check("the round trip completes without raising", False,
                   f"{type(e).__name__}: {e}")
 
-        # ---- ARM 2 (the AC's negative case): a malformed lane fails LOUDLY ----
-        # Written as RAW TEXT, not via dump(). This arm tests the READER's
-        # validation, so it must not depend on the writer — when dump() was
-        # sabotaged, a dump-built fixture made this arm fail for a reason that had
-        # nothing to do with lane validation, which is a misleading red.
+        # ---- ARM 2 (the AC's negative case): a malformed lane fails loudly ----
+        # Raw text, not dump(): this arm tests the reader, so a broken writer must not turn it red.
         bad_path = Path(d) / "bad.yaml"
         bad_path.write_text(
             "program: Swisper Foundry\n"

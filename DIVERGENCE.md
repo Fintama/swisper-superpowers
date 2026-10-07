@@ -31,8 +31,8 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `writing-exec-summaries` | `Retrospective` | The five-section report, made portable. It lived only in one machine's project memory. |
 | `setup-delivery-program` | `init-programme.sh` | The programme state directory is created, not assumed. Without it the monitoring and messaging tools abort on a missing lane map. |
 | `setup-delivery-program` | `seven tests a lane must pass` | Lanes are derived from the architecture, not invented from job titles. |
-| `creating-screen-mocks` | `CHIEF EXPERIENCE OFFICER` | DESIGN.md and component docs are direction, not reference — ignoring them overrides a person. |
-| `creating-screen-mocks` | `MORE THAN ONE PACKAGE` | A design system is usually several packages; finding one and designing from it invents gaps that do not exist. Count the filesystem, not the registry. |
+| `creating-screen-mocks` | `the Chief Experience` | DESIGN.md and component docs are direction, not reference — ignoring them overrides a person. |
+| `creating-screen-mocks` | `more than one package` | A design system is usually several packages; finding one and designing from it invents gaps that do not exist. Count the filesystem, not the registry. |
 | `creating-screen-mocks` | `data-testid` | The join key the render gate needs. Without it nothing downstream can be compared. |
 | `creating-screen-mocks` | `init-workspace.sh` | The workspace is scaffolded with the review loop already wired. Measured: an agent that hand-wrote it shipped a mock nobody could click. An agent cannot forget a step it never performs. |
 | `creating-screen-mocks` | `verify-review-loop.mjs` | The gate that can fail on a missing review loop. Every other verification item passed on an unreviewable mock, so the verify phase was blind to the one omission that matters. |

@@ -5,208 +5,87 @@ description: Use when about to claim work is complete, fixed, or passing, before
 
 # Verification Before Completion
 
-## Overview
+**Evidence before claims.** Don't say work is done, fixed or passing until you have read
+fresh evidence for it. The exception: you may report something you have not verified if
+you say so plainly ("not verified: the e2e suite has not run on this commit").
 
-Claiming work is complete without verification is dishonesty, not efficiency.
+## What counts as verified
 
-**Core principle:** Evidence before claims, always.
+**Verified means fresh evidence for THIS commit**, the SHA you are making the claim
+about, from one of:
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+- **a scoped run** you did on it: the tests for the change, the existing tests of the
+  module you touched, and the project's core smoke set (the test tiers in
+  `swisper-superpowers:test-driven-development`); or
+- **CI's run on that SHA**, whose result you have read.
 
-## The Iron Law
+The full suite is CI's job; run it locally only when asked. Not evidence for this commit:
+a run on an earlier commit, a run before your last edit, an agent's or colleague's
+report, "CI was green yesterday".
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+## The gate
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+1. **Identify** the command or CI check that proves the claim.
+2. **Run** it on this commit, or open CI's result for this SHA.
+3. **Read** all of it: exit code, failure count, which tests actually ran.
+4. **Claim** exactly what it shows, with the evidence (count, check name, SHA). If it
+   doesn't confirm the claim, report the actual state.
 
-## The Gate Function
+"Should pass", "probably", "seems to", "Done!" before step 3 are claims without evidence.
 
-```
-BEFORE claiming any status or expressing satisfaction:
+## What each claim needs
 
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
-5. ONLY THEN: Make the claim
+| Claim | Evidence | Not enough |
+|---|---|---|
+| Tests pass | test output: 0 failures, the expected tests ran | an earlier run, "should pass" |
+| Lint clean | linter output: 0 errors | a partial check |
+| Build succeeds | build exits 0 | lint passing, logs look fine |
+| Bug fixed | the original symptom, reproduced, now gone | code changed |
+| Regression test works | red-green: it fails without the fix (see Positive control) | it passes once |
+| Requirements met | the plan or spec re-read, each item checked, gaps listed | tests pass |
+| TDD followed | `git log -p`: the failing-test commit precedes the fix | "I followed TDD" |
+| AC-N verified | a test titled with its id (`B-AC-N: …`, `T-AC-N: …`) is green | some test in the area |
+| Business AC, frontend touched | a front-to-back test at promise altitude, as `test-driven-development/proving-acs.md` defines | a component test against a mocked backend |
+| Contract safe | a test from a consumer (or a fixture acting as one) exercises it | the producer's own unit test |
+| No new escape hatches | the diff grep below is empty, or each hit has its reason on the same line | "I didn't add any" |
+| No retry-on-flake | no retry config and no added `sleep()` in the diff | "it passes for me" |
+| Delegated work done | the diff, and evidence you read yourself | the agent says "success" |
 
-Skip any step = lying, not verifying
-```
+## Positive control
 
-## Common Failures
+**A check that cannot fail proves nothing.** Before you rely on a test, gate, lint or
+script to catch something: break it on purpose, run it, watch it go red for the expected
+reason, restore, watch it go green.
 
-| Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
-| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
-| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
-| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Regression test works | Red-green cycle verified | Test passes once |
-| Agent completed | VCS diff shows changes | Agent reports "success" |
-| Requirements met | Line-by-line checklist | Tests passing |
-| TDD followed | `git log -p` shows failing-test commit before passing-test commit | "I followed TDD" claim |
-| AC-N verified | Test named `test('B-AC-N: …'` or `test('T-AC-N: …'` is green | Some test exists in the area |
-| Business AC verified | Integration / E2E (Playwright if frontend) green AND back-end effect asserted | Frontend unit test against mocked backend |
-| Contract produced + safe | At least one test from a CONSUMER (or fixture acting as consumer) exercises the contract end-to-end | Producer's own unit test |
-| Frontend touched safely | Playwright spec exists; spec drives browser; spec asserts back-end effect | Vitest component test |
-| No new escape hatches | `git diff base..HEAD \| grep -E '@ts-ignore\|eslint-disable\|as any'` returns nothing (or every hit has an explicit justification comment) | "I didn't add any" claim |
-| No retry-on-flake | Test runner config has `retries: 0` (or absent); no `sleep()` added | "It passes consistently for me" |
-| Polis-bar / quality-bar gates green | `bun run typecheck && bun run lint --max-warnings 0 && bun run test --coverage && bun run benchmark` all exit 0 | Subset run |
+- Regression test: revert the fix, run (it must fail), restore, run (it passes).
+- AC test: break the behaviour the AC promises and watch the test name the break.
+- Gate or script: feed it the thing it exists to catch (a broken id, the forbidden
+  pattern) and see it report it; use its `--self-test` where it has one.
+- An empty result (no matches, 0 tests ran, skipped) is not green until you know the
+  check ran on something: a filter that matches nothing passes silently.
 
-## Red Flags - STOP
+## When to apply
 
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
+Before any statement that work is done, fixed or passing, in any wording; before a
+commit, push or PR; before marking a task done or moving to the next one; before
+suggesting a sub-PR merge; before passing on an agent's result.
 
-## Rationalization Prevention
+## At a per-PR merge gate
 
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
-| "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
+The checklist is the plan's merge gate (`swisper-superpowers:writing-plans`) and the
+reviewer's (`swisper-superpowers:requesting-code-review`, `code-reviewer.md`). This skill
+supplies the evidence for each line, on the commit being proposed:
 
-## Key Patterns
-
-**Tests:**
-```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
+```bash
+git log -p <feature-branch>..HEAD                       # failing-test commit before each fix
+<test runner> -t "B-AC-1"                               # the id appears in the output as run and passed
+trace-check.sh <feature-branch>..HEAD                   # every new test names an id
+git diff --name-only <feature-branch>..HEAD | grep -E '\.(tsx?|jsx?|vue|svelte|html|css|scss)$' | grep -vE '\.(test|spec)\.'
+git diff <feature-branch>..HEAD | grep -nE '^\+.*(@ts-ignore|@ts-expect-error|eslint-disable|as any|as unknown as)'
+git diff <feature-branch>..HEAD -- '*.config.*' | grep -nE '(retries|retry|retryTimes):\s*[1-9]'
 ```
 
-**Regression tests (TDD Red-Green):**
-```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
-❌ "I've written a regression test" (without red-green verification)
-```
-
-**Build:**
-```
-✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
-```
-
-**Requirements:**
-```
-✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
-❌ "Tests pass, phase complete"
-```
-
-**Agent delegation:**
-```
-✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
-```
-
-## Why This Matters
-
-From 24 failure memories:
-- your human partner said "I don't believe you" - trust broken
-- Undefined functions shipped - would crash
-- Missing requirements shipped - incomplete features
-- Time wasted on false completion → redirect → rework
-- Violates: "Honesty is a core value. If you lie, you'll be replaced."
-
-## When To Apply
-
-**ALWAYS before:**
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
-- **Suggesting merge of a sub-PR into the feature branch** (the per-PR merge gate's verification is this skill's hardest application)
-- **Marking a task DONE in TodoWrite** when working a plan
-
-**Rule applies to:**
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
-
-## Per-PR merge gate verification (when working a plan with PR decomposition)
-
-This skill is the **enforcer at the per-PR merge gate** defined in `superpowers:writing-plans` and orchestrated by `superpowers:executing-plans` / `superpowers:subagent-driven-development`. Before suggesting merge of any sub-PR, run every applicable verification below — fresh, in this session — and confirm each passes:
-
-1. **TDD evidence** — `git log -p <feature-branch>..HEAD` shows, for each AC the PR verifies, a failing-test commit before the passing-test commit. If not, TDD was skipped — escalate.
-
-2. **AC coverage** — for each B-AC-N / T-AC-N the PR claims, the test named with the AC ID is in the diff and is green. Run the test; read the output; verify the AC ID appears in the test name in the output.
-
-   ```bash
-   bun run test -- -t "B-AC-1"   # filter by AC ID; confirm it ran and passed
-   bun run test -- -t "T-AC-9"
-   ```
-
-3. **Test level appropriate** — confirm by reading the test file:
-   - Each AC test asserts at the boundary where the promise is received (route/API response, rendered UI, persisted state); unit tests only for the `test-driven-development` R3 exceptions
-   - `trace-check.sh <base>..HEAD` (in `test-driven-development`) is green: no new test without an AC / INV / FM id
-   - If the PR touched a frontend file, a Playwright spec exists, drives the browser, AND asserts a back-end effect
-
-   Confirm frontend-touch via:
-   ```bash
-   git diff --name-only <feature-branch>..HEAD | grep -E '\.(tsx?|jsx?|vue|svelte|html|css|scss)$' | grep -v '\.test\.' | grep -v '\.spec\.'
-   ```
-
-   If the grep returns matches, find the corresponding Playwright spec. If none exists, **STOP** — this is a Critical merge-gate failure.
-
-4. **Contracts exercised across consumer boundary** — for each contract the PR produces, identify the consumer-side test that uses the contract end-to-end. If the only test is the producer's unit test, the contract is unverified — escalate.
-
-5. **Quality-bar gates green** — for projects with a quality bar (Polis-bar etc.), run the full gate command set fresh:
-
-   ```bash
-   bun run typecheck                                   # exit 0
-   bun run lint --max-warnings 0                       # exit 0
-   bun run test --coverage                             # exit 0; coverage thresholds met
-   bun run benchmark                                   # exit 0; within baseline
-   ! grep -rn 'eslint-disable' packages/*/src/         # exit 0 (no matches)
-   ./scripts/check-license-headers.sh                  # exit 0
-   ./scripts/check-adr-required.sh                     # exit 0 (or N/A)
-   ```
-
-   Each must exit 0 in this session. "CI was green yesterday" is not verification.
-
-6. **No new escape hatches** —
-
-   ```bash
-   git diff <feature-branch>..HEAD | grep -nE '^\+.*(@ts-ignore|@ts-expect-error|eslint-disable|as any|as unknown as)'
-   ```
-
-   Returns nothing — or every match has an adjacent justification comment AND is permitted by the project's quality bar.
-
-7. **No retry-on-flake config introduced** —
-
-   ```bash
-   git diff <feature-branch>..HEAD -- '*.config.*' | grep -nE '(retries|retry|retryTimes):\s*[1-9]'
-   ```
-
-   Returns nothing.
-
-8. **Decision record if non-obvious decision** — in a project with an architecture site, the "Why it is like this" block of the page the decision shaped (no ADR files). Otherwise: if the PR touched code at a project's "ADR-required" path (per the project's `check-adr-required.sh`), an ADR file is in the diff under the project's ADR directory and follows the project's template.
-
-9. **CHANGELOG updated for user-facing change** — for any user-facing change, the CHANGELOG.md diff includes the entry.
-
-If ANY of 1–9 fails, the PR is not ready. Fix it, then re-run the verification fresh — do not paper over with a rationalization or skip the failing check.
-
-## The Bottom Line
-
-**No shortcuts for verification.**
-
-Run the command. Read the output. THEN claim the result.
-
-This is non-negotiable.
+A frontend file in the diff needs its front-to-back test (proving-acs.md); a contract
+needs its consumer test, named; the project's quality gates need CI's result for this
+SHA or a run of the gate commands on it. Any line without evidence means the PR is not
+ready: fix it and verify again on the new commit.

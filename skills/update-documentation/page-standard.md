@@ -16,7 +16,7 @@ The binding sources are the approved spec (Swisper_Documentation `specs/swisper/
    - Hand-drawn SVG in the E.2 style: the `d-*` classes only, `currentColor`, no literal colours, labelled arrows, `role="img"` and an `aria-label` carrying the claim. `![[diagrams/<ch>/x.svg]]` on its own line, then `caption: <the claim>`.
    - Generated, never hand-drawn, when the code fully defines it: `{{graph: <name>}}`, `{{er: <slice>}}`, inventories.
    - Screenshot when the user's view explains best: `![[screenshots/<ch>/x.png]]`, then `caption:`, `captured: <date · source>`, `alt:`.
-3. **The pyramid.** Overview pages: plain words only; inline `code` only inside `::: dev`, no fenced code. Design pages: contracts, decisions and the rejected alternative, ownership, a rules grid (`:::: rules` / `::: rule <Title>` … `:::` / `::::`, optional `src:` line). Developer detail goes in the collapsed `::: dev` block: code anchors (`path::Symbol` for Python, `path:line` for TS and other files; SKILL.md §3a) and the tests that pin them.
+3. **The pyramid.** Overview pages: plain words only; inline `code` only inside `::: dev`, no fenced code. Design pages: contracts, decisions and the rejected alternative, ownership, a rules grid (`:::: rules` / `::: rule <Title>` … `:::` / `::::`, optional `src:` line). Developer detail goes in the collapsed `::: dev` block: code anchors (`path::Symbol` for Python, `path:line` for TS and other files; SKILL.md §3) and the tests that pin them.
 4. `{{findings}}` places the generated findings section. Cross-links: `[[2.5]]`, `[[2.5|text]]`, `[[F-031]]` — the build fails on a dangling one.
 
 ## Honest assessment and findings

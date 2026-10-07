@@ -7,10 +7,7 @@
  *   ./render-graphs.js <skill-directory>           # Render each diagram separately
  *   ./render-graphs.js <skill-directory> --combine # Combine all into one diagram
  *
- * Extracts all ```dot blocks from SKILL.md and renders to SVG.
- * Useful for helping your human partner visualize the process flows.
- *
- * Requires: graphviz (dot) installed on system
+ * Writes the SVGs to <skill-directory>/diagrams/. Requires graphviz (`dot`).
  */
 
 const fs = require('fs');
@@ -25,7 +22,6 @@ function extractDotBlocks(markdown) {
   while ((match = regex.exec(markdown)) !== null) {
     const content = match[1].trim();
 
-    // Extract digraph name
     const nameMatch = content.match(/digraph\s+(\w+)/);
     const name = nameMatch ? nameMatch[1] : `graph_${blocks.length + 1}`;
 
@@ -36,13 +32,12 @@ function extractDotBlocks(markdown) {
 }
 
 function extractGraphBody(dotContent) {
-  // Extract just the body (nodes and edges) from a digraph
   const match = dotContent.match(/digraph\s+\w+\s*\{([\s\S]*)\}/);
   if (!match) return '';
 
   let body = match[1];
 
-  // Remove rankdir (we'll set it once at the top level)
+  // The combined graph sets rankdir once at the top.
   body = body.replace(/^\s*rankdir\s*=\s*\w+\s*;?\s*$/gm, '');
 
   return body.trim();
@@ -51,7 +46,6 @@ function extractGraphBody(dotContent) {
 function combineGraphs(blocks, skillName) {
   const bodies = blocks.map((block, i) => {
     const body = extractGraphBody(block.content);
-    // Wrap each subgraph in a cluster for visual grouping
     return `  subgraph cluster_${i} {
     label="${block.name}";
     ${body.split('\n').map(line => '  ' + line).join('\n')}
@@ -107,7 +101,6 @@ function main() {
     process.exit(1);
   }
 
-  // Check if dot is available
   try {
     execSync('which dot', { encoding: 'utf-8' });
   } catch {
@@ -133,7 +126,6 @@ function main() {
   }
 
   if (combine) {
-    // Combine all graphs into one
     const combined = combineGraphs(blocks, skillName);
     const svg = renderToSvg(combined);
     if (svg) {
@@ -141,7 +133,6 @@ function main() {
       fs.writeFileSync(outputPath, svg);
       console.log(`  Rendered: ${skillName}_combined.svg`);
 
-      // Also write the dot source for debugging
       const dotPath = path.join(outputDir, `${skillName}_combined.dot`);
       fs.writeFileSync(dotPath, combined);
       console.log(`  Source: ${skillName}_combined.dot`);
@@ -149,7 +140,6 @@ function main() {
       console.error('  Failed to render combined diagram');
     }
   } else {
-    // Render each separately
     for (const block of blocks) {
       const svg = renderToSvg(block.content);
       if (svg) {

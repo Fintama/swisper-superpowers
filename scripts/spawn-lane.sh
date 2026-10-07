@@ -1,59 +1,29 @@
 #!/usr/bin/env bash
 # spawn-lane.sh — start and name a workstream lane session in a tmux window.
-#
-# ONE implementation, used by BOTH `setup-delivery-program` (first spawn) and
-# `respawn-workstream` (succession). It was two prose recipes in two skills; a
-# procedure with two copies has two places to be wrong, and the one that is wrong
-# is always the one you did not read.
+# Used by setup-delivery-program (first spawn) and respawn-workstream (succession).
 #
 #   bash scripts/spawn-lane.sh WS3 "Agents & PDLC" 1 ../repo/.worktrees/ws3
 #   bash scripts/spawn-lane.sh WS3 "Agents & PDLC" 4 /abs/path/wt --model opus
 #
-# Every guard below cost someone an afternoon. None is optional.
+# Guards:
+#  1. The model is pinned: a bare `claude` inherits the last-saved default. Verify it after boot.
+#  2. CLAUDE_CODE_CHILD_SESSION is inherited from the spawner and disables transcript
+#     writing (no picker entry, no monitoring); it is stripped and persistence forced on.
+#  3. Type and Enter are separate send-keys calls with a pause; combined, the text sits unsubmitted.
+#  4. tmux, not screen: macOS's screen cannot inject into or capture a detached TUI.
+#  5. An existing tmux session of the same name is refused: never fork a live lane.
+#  6. The worktree is an argument, passed with -c and asserted from the booted session.
+#     A session works in the cwd it was started in, whatever its briefing says, and two
+#     sessions in one .git/index give silent false greens.
+#  7. A worktree already holding a live session (per `claude agents --json`) is refused.
+#     It sees only sessions this CLI registers; if the registry can't be read, it warns
+#     and continues unverified.
 #
-#  1. MODEL MUST BE PINNED. A bare `claude` silently inherits the last-saved
-#     "default for new sessions" — that is how five lanes came up on the wrong
-#     model while settings said otherwise. Pinned here AND verified after boot.
+# A worktree Claude has never seen opens the "trust this project?" dialog, which nothing
+# here answers: the script exits 75 "never registered". Attach, trust it once by hand.
 #
-#  2. CLAUDE_CODE_CHILD_SESSION IS INHERITED from the spawning process and
-#     SILENTLY DISABLES TRANSCRIPT WRITING → no picker entry, no monitoring, no
-#     handover on respawn. Stripped, with persistence forced on.
-#
-#  3. TYPE AND ENTER MUST BE SEPARATE send-keys CALLS with a pause between. A
-#     combined `... Enter` leaves the text sitting unsubmitted in the composer,
-#     and the lane looks spawned while having received nothing.
-#
-#  4. tmux, NOT screen. macOS ships screen 4.00.03, which cannot inject into or
-#     capture a detached TUI.
-#
-#  5. NEVER FORK A LIVE LANE. An existing tmux session of the same name is
-#     refused, not reused: two sessions on one lane both keep working and the
-#     divergence only shows up once their branches disagree.
-#
-#  6. THE WORKTREE IS AN ARGUMENT, NOT PROSE. Until 2026-08-30 this script had
-#     no -c, so every lane started in *the PM's* cwd and the worktree reached it
-#     only as a sentence in the spawn document. A session starts in the cwd it
-#     was given, never the path in its briefing — that is how two mutators end
-#     up in one .git/index, which yields silent false greens, not conflicts.
-#     Passed to tmux with -c, validated before boot, ASSERTED after.
-#
-#  7. A WORKTREE ALREADY HOLDING A LIVE SESSION IS REFUSED — same index, same
-#     failure. Read from `claude agents --json`.
-#     ⚠ What guard 7 does NOT prove: it sees only sessions this CLI registers.
-#     A plain editor, a script, or a session from another CLI build writing that
-#     worktree is invisible to it. If the registry cannot be read at all the
-#     guard says so LOUDLY and continues — an unverified spawn is announced,
-#     never silent.
-#
-# KNOWN, and deliberately not worked around: a worktree Claude has never seen
-# opens with the "Is this a project you trust?" dialog, which no send-keys here
-# answers. The lane then never registers and this script exits 75. That is the
-# correct outcome — a spawn that needs a human keystroke should stop and say so
-# — but the message says "never registered", not "waiting on trust", so attach
-# and look before assuming the lane is broken. Trust the worktree once, by hand.
-#
-# It does NOT write the spawn document and does NOT brief the lane — callers do
-# that, because the content differs between a first spawn and a succession.
+# It does not write the spawn document or brief the lane; callers do, because a first
+# spawn and a succession differ.
 set -euo pipefail
 
 MODEL="opus"
@@ -83,14 +53,10 @@ if [ ! -d "$WT_IN" ]; then
   echo "spawn-lane: worktree '$WT_IN' does not exist or is not a directory — REFUSING." >&2
   exit 66
 fi
-# Realpath it: the session registry stores a resolved path, so an unresolved
-# one here would make the post-boot assertion compare two different spellings
-# of the same directory and fail for the wrong reason.
+# Resolved, because the session registry stores resolved paths and the post-boot check compares them.
 WT="$(cd "$WT_IN" && pwd -P)"
 
-# Guard 6b: it must be the ROOT of a git worktree, not merely inside one.
-# git's upward discovery answers about the ENCLOSING repo, so a path one level
-# wrong reports the parent checkout and looks entirely healthy.
+# Guard 6b: it must be a worktree root; a path inside one would put the lane in the enclosing checkout.
 TOP="$(git -C "$WT" rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$TOP" ]; then
   echo "spawn-lane: '$WT' is not inside a git repository — REFUSING." >&2
@@ -104,15 +70,10 @@ if [ "$TOP" != "$WT" ]; then
   exit 66
 fi
 
-# Guard 7: refuse a worktree that already holds a live session. See header for
-# what this does NOT cover.
+# Guard 7: refuse a worktree that already holds a live session (limits in the header).
 if OCC_JSON="$(claude agents --json 2>/dev/null)"; then
-  # NO f-strings and NO backslash-escaped quotes in here: this block lives
-  # inside a single-quoted shell string, where \" reaches python verbatim and
-  # is a SyntaxError. The first version of this guard did exactly that, with
-  # stderr redirected to /dev/null — so it crashed on every run, produced an
-  # empty answer, and read as "no occupant". It passed a worktree that had
-  # three live sessions in it. A guard that cannot fail is not a guard.
+  # No f-strings or \" in this single-quoted python: \" reaches python verbatim, the
+  # SyntaxError is hidden, and an empty answer reads as "no occupant".
   OCC_RC=0
   OCCUPANT="$(printf '%s' "$OCC_JSON" | python3 -c '
 import json, sys, os
@@ -148,8 +109,7 @@ command -v tmux >/dev/null 2>&1 || {
   exit 69
 }
 
-# Guard 5: never fork a live lane. Two sessions on one lane both keep working,
-# and the divergence is only visible once their branches disagree.
+# Guard 5: never fork a live lane.
 if tmux has-session -t "$SESSION" 2>/dev/null; then
   echo "spawn-lane: tmux session '$SESSION' already exists — REFUSING." >&2
   echo "            Attach: tmux attach -t $SESSION" >&2
@@ -160,23 +120,13 @@ fi
 echo "spawn-lane: starting '$NAME' (model=$MODEL) in tmux session '$SESSION'"
 echo "spawn-lane: worktree $WT"
 
-# Guards 1 + 2 + 6 live in this one command. -c is what actually puts the lane
-# in its own worktree; everything above only proved the path was worth using.
+# Guards 1, 2 and 6.
 tmux new-session -d -s "$SESSION" -x 200 -y 50 -c "$WT" \
   "env -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_ENTRYPOINT \
    CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1 claude --model $MODEL"
 
-# Readiness, step 1 of 2: wait for the session to REGISTER. This is the
-# authoritative signal — the session writes ~/.claude/sessions/<pid>.json itself
-# — and unlike scraping the TUI it does not change shape between releases.
-#
-# 🔴 The pane-scrape that used to be the ONLY readiness test grepped for
-# '│', '>' or 'Welcome'. Claude Code 2.1.251 draws '❯' and '─' and no
-# "Welcome", so NONE of the three ever matched: every spawn burned the full 60s,
-# exited 75 "no prompt", and left a healthy un-renamed, un-briefed lane running
-# in tmux for someone to find later. Measured 2026-08-30. A readiness check that
-# cannot observe readiness reports a failure that did not happen, which is worse
-# than no check — it manufactures orphans.
+# Readiness 1/2: wait for the session to register in ~/.claude/sessions/<pid>.json.
+# That file is the reliable signal; the TUI's characters change between releases.
 SID=""; LANE_CWD=""
 for _ in $(seq 1 30); do
   read -r SID LANE_CWD <<<"$(python3 -c '
@@ -201,13 +151,8 @@ if [ -z "$SID" ]; then
   exit 75
 fi
 
-# Guard 6, the half that is a measurement: -c is a claim until the session that
-# actually booted agrees with it. Read the cwd back from the running session's
-# own registry entry — not from tmux, not from this script's variables, both of
-# which would only re-assert what we already believe.
-#
-# This runs BEFORE the lane is typed at. A lane in the wrong worktree must
-# receive nothing: a briefing is the first thing that would make it write.
+# Guard 6: read the cwd back from the booted session's own registry entry, before
+# anything is typed at it; a lane in the wrong worktree must receive nothing.
 if [ "$(cd "$LANE_CWD" 2>/dev/null && pwd -P || echo "$LANE_CWD")" != "$WT" ]; then
   echo "spawn-lane: ✗ CWD ASSERTION FAILED — the lane is NOT in its worktree." >&2
   echo "            expected: $WT" >&2
@@ -217,10 +162,8 @@ if [ "$(cd "$LANE_CWD" 2>/dev/null && pwd -P || echo "$LANE_CWD")" != "$WT" ]; t
   exit 76
 fi
 
-# Readiness, step 2 of 2: the composer must actually be accepting input.
-# Registration happens at startup, which is earlier — and guard 3 exists because
-# typing before the composer is live is silently swallowed. Pattern covers the
-# current TUI ('❯', '─') and older ones ('>', '│', 'Welcome').
+# Readiness 2/2: the composer accepts input (it comes up after registration). The
+# pattern covers the current TUI ('❯', '─') and older ones ('>', '│', 'Welcome').
 for _ in $(seq 1 30); do
   if tmux capture-pane -t "$SESSION" -p 2>/dev/null | grep -q '❯\|─\|│\|>\|Welcome'; then
     READY=1; break
@@ -233,7 +176,7 @@ if [ "${READY:-0}" != "1" ]; then
   exit 75
 fi
 
-# Guard 3: type, pause, THEN Enter — separately, both times.
+# Guard 3: type, pause, then Enter.
 tmux send-keys -t "$SESSION" "/rename $NAME"; sleep 2
 tmux send-keys -t "$SESSION" Enter;           sleep 3
 

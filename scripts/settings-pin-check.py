@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""C5's pin — this work must not touch the user's own SessionStart hook.
+"""Pin (C5): nothing in this repo may edit the user's own SessionStart hook in ~/.claude/settings.json.
 
-`~/.claude/settings.json` carries Heiko's OWN SessionStart entry (the
-post-compaction briefing). It is a different hook from the one this plugin ships,
-and nothing in this repo may edit it.
-
-⚠ ASSERTED AT FIELD LEVEL, NOT BY WHOLE-FILE CHECKSUM. The invariant is "we did
-not touch the SessionStart block". A file-wide `shasum` cannot tell that from any
-unrelated edit to the same file — it fires on things that are not this PR's
-business, and a red that is routinely wrong gets routinely ignored.
+That hook is the user's, not the one this plugin ships. The check hashes the
+SessionStart block only, not the whole file, so an unrelated settings edit is not a red.
 
   --capture   record the current SessionStart block as the baseline
   (default)   compare the current block against the baseline, naming SessionStart

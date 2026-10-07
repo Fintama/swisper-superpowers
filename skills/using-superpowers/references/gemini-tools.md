@@ -20,15 +20,9 @@ Skills use Claude Code tool names. When you encounter these in a skill, use your
 
 Gemini CLI supports subagents natively via the `@` syntax. Use the built-in `@generalist` agent to dispatch any task — it has access to all tools and follows the prompt you provide.
 
-When a skill says to dispatch a named agent type, use `@generalist` with the full prompt from the skill's prompt template:
-
-| Skill instruction | Gemini CLI equivalent |
-|-------------------|----------------------|
-| `Task tool (superpowers:implementer)` | `@generalist` with the filled `implementer-prompt.md` template |
-| `Task tool (spec review)` | *(retired — the per-task spec review and its `spec-reviewer-prompt.md` were removed; spec fidelity is proved by AC-named tests and the PR-boundary review)* |
-| `Task tool (superpowers:code-reviewer)` | `@code-reviewer` (bundled agent) or `@generalist` with the filled review prompt |
-| `Task tool (superpowers:code-quality-reviewer)` | `@generalist` with the filled `code-quality-reviewer-prompt.md` template |
-| `Task tool (general-purpose)` with inline prompt | `@generalist` with your inline prompt |
+When a skill dispatches `Task tool (general-purpose)` with a prompt template (for example
+`implementer-prompt.md` or `requesting-code-review/code-reviewer.md`) or with an inline prompt,
+use `@generalist` with the filled template or the prompt. The skills name no other agent types.
 
 ### Prompt filling
 
@@ -36,7 +30,7 @@ Skills provide prompt templates with placeholders like `{WHAT_WAS_IMPLEMENTED}` 
 
 ### Parallel dispatch
 
-Gemini CLI supports parallel subagent dispatch. When a skill asks you to dispatch multiple independent subagent tasks in parallel, request all of those `@generalist` or named subagent tasks together in the same prompt. Keep dependent tasks sequential, but do not serialize independent subagent tasks just to preserve a simpler history.
+Gemini CLI supports parallel subagent dispatch. When a skill asks you to dispatch multiple independent subagent tasks in parallel, request all of those `@generalist` tasks together in the same prompt. Keep dependent tasks sequential, but do not serialize independent subagent tasks just to preserve a simpler history.
 
 ## Additional Gemini CLI tools
 

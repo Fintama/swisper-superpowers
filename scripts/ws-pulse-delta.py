@@ -1,37 +1,27 @@
 #!/usr/bin/env python3
-"""PM pulse, delta edition — prints ONLY what changed since the last run.
+"""PM pulse, delta edition: prints only what changed since the last run, plus new mailbox traffic.
 
-Replaces the full ws-pulse.py output in the recurring cron: state is hashed
-into .handover/.pulse-state.json; an unchanged program prints one short line
-(~20 tokens) instead of ~800. Run ws-pulse.py manually when a change needs
-investigation. Also surfaces new PM-mailbox traffic (inbox/outbox protocol).
+For the recurring cron; state is hashed into .handover/.pulse-state.json, and an unchanged
+programme prints one short line. Run ws-pulse.py by hand to investigate a change.
 """
 import hashlib, json, os, re, subprocess, sys
 
 import sys as _s, pathlib as _p
 _s.path.insert(0, str(_p.Path(__file__).resolve().parent))
 from program_root import program_dir as _pd, program_root as _pr, program_transcripts as _pt
-H = _pd()             # C2: was a literal relative directory name
+H = _pd()
 STATE = f"{H}/.pulse-state.json"
-PROJ = _pt()          # 🔴 C2/HC-2: was a hard-coded, USER-specific absolute path
+PROJ = _pt()
 WS = [
-    # ── LANE MAP ──────────────────────────────────────────────────────────────
-    # ("WS<n>-<k> <Lane title>", "<session-uuid>") — must match ws-pulse.py.
+    # Same rows as ws-pulse.py: ("WS<n>-<k> <Lane title>", "<session-uuid>")
     # ("WS1-1 Example Lane", "00000000-0000-0000-0000-000000000000"),
 ]
 
 def sh(cmd):
     try:
-        # shell=True is deliberate and the pipelines below depend on it. Every
-        # `cmd` passed here is a literal composed in this file from git/tmux
-        # output — no external or user-supplied input reaches it — and this
-        # script is PM tooling run from a local cron. It is never deployed and
-        # never runs in the product. Annotated locally rather than adding a
-        # .semgrepignore: the repo has none, so creating one would REPLACE
-        # semgrep's default ignore set and weaken SAST across the whole tree
-        # to silence one line. The directive must be the LAST comment before
-        # the match — semgrep only honours it on the match line or the line
-        # immediately preceding it.
+        # shell=True for the pipelines: every cmd is a literal built in this file, no outside input.
+        # Suppressed here, not in a .semgrepignore, which would replace semgrep's default ignores.
+        # The directive must stay the last line before the call.
         # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
         return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30).stdout.strip()
     except Exception:

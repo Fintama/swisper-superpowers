@@ -24,10 +24,8 @@ multi_agent = true
 
 This enables `spawn_agent`, `wait_agent`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
 
-Legacy note: Codex builds before `rust-v0.115.0` exposed spawned-agent
-waiting as `wait`. Current Codex uses `wait_agent` for spawned agents. The
-`wait` name now belongs to code-mode `exec/wait`, which resumes a yielded exec
-cell by `cell_id`; it is not the spawned-agent result tool.
+Wait for a spawned agent with `wait_agent`. `wait` is a different tool (it resumes a
+yielded exec cell); only Codex builds before `rust-v0.115.0` used it for agents.
 
 ## Environment Detection
 
@@ -44,7 +42,7 @@ BRANCH=$(git branch --show-current)
 - `BRANCH` empty → detached HEAD (cannot branch/push/PR from sandbox)
 
 See `using-git-worktrees` Step 0 and `finishing-a-development-branch`
-Step 1 for how each skill uses these signals.
+Step 2 for how each skill uses these signals.
 
 ## Codex App Finishing
 

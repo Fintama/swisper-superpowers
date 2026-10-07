@@ -41,7 +41,8 @@ Subagent (general-purpose):
     `git diff [FIX_BASE_SHA]..[HEAD_SHA]`.
 
     Your review is read-only on this checkout. Do not mutate the working
-    tree, the index, HEAD, or branch state in any way.
+    tree, the index, HEAD, or branch state in any way. Write only to your own
+    scratch subdirectory, and never print environment variables.
 
     ## Scope
 
@@ -99,9 +100,9 @@ Subagent (general-purpose):
 **Placeholders:**
 - `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection; scoped
   re-reviews of small fix diffs take a cheap-to-mid tier
-- `[BRIEF_FILE]` — the task brief file (same file the implementer worked from)
-- `[FINDINGS]` — the Critical/Important findings and spec gaps from the
-  previous review, copied verbatim, one per bullet
+- `[BRIEF_FILE]` — the task brief in the plan's workspace (`scripts/sdd-workspace`), the text the implementer was dispatched with
+- `[FINDINGS]` — the open Critical/Important findings from the previous
+  review, copied verbatim, one per bullet
 - `[REPORT_FILE]` — the implementer's report file (fix reports appended)
 - `[FIX_BASE_SHA]` — the head the previous review saw
 - `[HEAD_SHA]` — current commit

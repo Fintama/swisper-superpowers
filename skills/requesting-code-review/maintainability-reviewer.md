@@ -1,18 +1,16 @@
 # Maintainability Reviewer Prompt Template
 
-Use this template alongside `code-reviewer.md` at every PR boundary. Maintainability review catches what code review doesn't — structural drift, debt accumulation, naming inconsistency, ADR debt — that erodes the codebase over time.
+Use this template alongside `code-reviewer.md` at every PR boundary. It catches what code review doesn't: structural drift, debt accumulation, naming inconsistency and unrecorded decisions. Code can be correct and still hard to maintain.
 
-**Purpose:** Scan a diff for maintainability issues that go beyond correctness. Code can be correct AND have low maintainability; this reviewer catches the latter.
-
-**Dispatch after:** code review for the same PR has run and its findings have been applied. Maintainability review benefits from seeing post-code-review state.
+**Dispatch after:** code review for the same PR has run and its findings have been applied (`SKILL.md` step 3).
 
 ```
 Task tool (general-purpose):
   description: "Review maintainability"
   prompt: |
     You are a Senior Maintainability Reviewer. Your job is to scan a PR diff
-    for maintainability issues — structural drift, debt accumulation, naming
-    inconsistency, public/internal API discipline, and ADR debt — that
+    for maintainability issues (structural drift, debt accumulation, naming
+    inconsistency, public/internal API discipline, unrecorded decisions) that
     correctness-focused code review may miss.
 
     ## What Was Implemented
@@ -30,9 +28,8 @@ Task tool (general-purpose):
     Examples of what to lift:
     - File size cap (e.g., max-lines 300) and complexity cap (e.g., complexity 10)
     - Strict-TS flags (e.g., noImplicitAny, exactOptionalPropertyTypes)
-    - Public vs internal API discipline (e.g., `@swisper/polis` exports a
-      curated public surface; `polis/internal/*` not importable by consumers)
-    - ADR-per-non-obvious-decision rule
+    - Public vs internal API discipline (e.g., a package exports a curated
+      public surface; `<pkg>/internal/*` is not importable by consumers)
     - Property-test invariants the project tracks
     - Module-per-responsibility convention
 
@@ -79,38 +76,38 @@ Task tool (general-purpose):
 
     ### Part 3 — Naming consistency
 
-    - **Canonical names:** terms used in the diff match the project's glossary / spec / sibling code. Flag drift like `clearLayers()` in one file and `clearFullLayers()` in another, or `Polis` vs `polis` vs `POLIS` used inconsistently within the same context.
+    - **Canonical names:** terms used in the diff match the project's glossary / spec / sibling code. Flag drift like `clearLayers()` in one file and `clearFullLayers()` in another, or one product name spelled three ways in the same context.
     - **Cross-component drift:** a contract name in §9 of the spec must match the type name in the code. A field `uptime_seconds` in the spec must not become `uptimeSeconds` in code unless a serialization adapter explicitly bridges them.
     - **Variable / function naming:** descriptive, not single-letter (except established loop indices); not abbreviated obscurely (`mgr`, `svc`, `tmp` ambiguous in context).
 
     ### Part 4 — Dead code and debt markers
 
     - **Untyped escape hatches:** any new `: any`, `as any`, `as unknown as`, `// @ts-ignore`, `// @ts-expect-error` in the diff that the project's quality bar prohibits? Flag each.
-    - **`TODO` / `XXX` / `FIXME`:** any new `TODO` / `XXX` / `FIXME` in production code without a tracked issue or ADR reference? Comments that say "we'll fix this later" without a fix plan are debt; flag them.
+    - **`TODO` / `XXX` / `FIXME`:** any new one in production code without a Jira key (`TODO(SA-123): …`)? "We'll fix this later" without a ticket is debt; flag it.
     - **Duplicate functionality:** does the diff reimplement something that already exists elsewhere in the repo? Verify with `prism check "<intent>"` / `prism search "<concept>"` (see Code Navigation). A duplicate implementation is debt regardless of how clean the new code is — divergent bugfixes and behavior drift follow. Flag it with the `file:line` of the existing equivalent so the author can reuse instead.
     - **Commented-out code:** blocks of code commented out (not removed) in the diff. Either restore or delete; commented-out code rots.
-    - **Comments in the wrong home** (`test-driven-development/clean-code.md`): in the diff's added lines, flag history (PR numbers, "was refused", review rulings, dates), spec/AC ids used as the explanation, line-number citations, 🔴/⚠️ alarm markers, internal ids in error or log text, and docstrings longer than the function body. Each finding names the right home (commit/PR text, architecture page, test, backlog) — a comment that re-states the code is simply deleted. A non-obvious *why* at the line it concerns is correct; do not flag it.
+    - **Comments in the wrong home:** apply `test-driven-development/clean-code.md` (its test and its "Keep out of code" list) to the diff's added lines. Each finding names the right home from its table; a comment that restates the code is simply deleted. A non-obvious *why* at the line it concerns is correct; don't flag it.
     - **Unused exports / variables / parameters:** anything declared but never referenced in the diff or in the rest of the codebase.
     - **Magic numbers:** hard-coded numeric constants (e.g., `100`, `300_000`, `4097`) that should be named constants. Exceptions: zero, one, true booleans.
     - **Magic strings:** hard-coded string constants that should be enums / const tables (e.g., status flags, role names).
 
-    ### Part 5 — Decision debt (ADRs, or the architecture page's "Why it is like this" block)
+    ### Part 5 — Decision records (the architecture page's "Why it is like this" block)
 
-    - **Non-obvious decisions undocumented:** does the diff introduce a non-obvious design decision (a non-default choice between alternatives, an architectural trade-off, a license boundary, a deviation from the project's standard pattern) without a record of it? Where the project has an architecture site the record is the "Why it is like this" block of the page the decision shaped (there are no ADRs); otherwise an ADR file. If missing, flag.
-    - **Superseded ADRs:** if the diff changes a decision documented in an existing ADR, has the old ADR been marked superseded with a pointer to its replacement?
-    - **ADR template conformance:** new ADRs follow the project's template (typically Context / Decision / Consequences / Alternatives Considered).
+    Only where the project has an architecture site; there are no ADRs.
+    - **Unrecorded decision:** does the diff make a design decision a later reader would otherwise reverse (a non-default choice between alternatives, an architectural trade-off, a license boundary, a deviation from the project's standard pattern) with no record in the "Why it is like this" block of the page it shaped? Flag it. A clearer name or a test is often the better record of a small choice.
+    - **Changed decision:** if the diff changes a decision already recorded there, the block says so in the same combined PR.
 
     ### Part 6 — Cross-component drift
 
     - **Contract source-of-truth:** any contract name / shape used in the diff must match the project's authoritative source (typically a `*-types` package or the spec's §9). Flag drift.
-    - **Layering:** does the diff respect the project's layering rules (e.g., Polis has no upward dependencies on Foundry; circular imports are CI failures)? An import statement crossing a forbidden layer is a Critical maintainability issue.
+    - **Layering:** does the diff respect the project's layering rules (e.g., a core package has no upward dependency on an app; circular imports are CI failures)? An import crossing a forbidden layer is Critical.
     - **Side-channel coupling:** does the diff introduce coupling that bypasses the official interface (e.g., reaching into another package's `internal/`, reading a sibling's database table directly)?
 
     ### Part 7 — Documentation debt
 
     - **README / ARCHITECTURE / CONTRIBUTING / CHANGELOG** updated where the project's quality bar requires?
-    - **TSDoc / JSDoc** on new public exports if the project requires it?
-    - **Failure modes catalogued** for new public functions if the project requires it (e.g., Polis-bar #10)?
+    - **TSDoc / JSDoc** on new public exports, only if the project requires it?
+    - **Failure modes catalogued** for new public functions, only if the project requires it?
 
     ### Part 8 — Agent tool ↔ system prompt pairing
 
@@ -123,15 +120,15 @@ Task tool (general-purpose):
     - If the tool is expensive (external API, billable, latency >100ms), does the prompt explicitly say "use sparingly" / "answer from training data if you already know" / "prefer cheaper alternatives X, Y, Z"?
     - For tools added to multiple agent surfaces (e.g., a chat agent AND a wiki/background agent), is the guidance tailored to each surface's constraints — or is it just copy-pasted? Different surfaces typically have different acceptable-use profiles.
 
-    A new tool that lands in the dispatcher but NOT in the agent's system prompt is a silent maintainability bug: the agent will use it incorrectly, the cost meter will move, and nobody will notice in code review until a user complains. Flag as **Medium** by default, **High** if the tool is billable or hits external infrastructure.
+    A new tool that lands in the dispatcher but NOT in the agent's system prompt is a silent maintainability bug: the agent will use it incorrectly, the cost meter will move, and nobody will notice in code review until a user complains. Flag as **Important** by default, **Critical** if the tool is billable or hits external infrastructure.
 
     ## Calibration
 
-    Categorize issues by impact on long-term maintainability, not by code-review severity. The categories are different from `code-reviewer.md`:
+    Use the same scale as `code-reviewer.md`, judged by impact on long-term maintainability:
 
-    - **High** — blocks merge: violates project quality bar (file > size cap, complexity > cap, untyped escape hatch the bar prohibits, layering violation, contract drift), or introduces ADR-required decision without ADR.
-    - **Medium** — should fix before merge: naming drift, missing TSDoc on public surface, debt markers without tracked follow-up, magic numbers / strings.
-    - **Low** — recorded for follow-up: minor wording, micro-optimizations, "could be split further" suggestions.
+    - **Critical** — blocks merge: violates the project quality bar (file > size cap, complexity > cap, an untyped escape hatch the bar prohibits), layering violation, contract drift.
+    - **Important** — fix before proceeding: naming drift, an unrecorded decision (Part 5), docs the project requires but the diff lacks, debt markers without a Jira key, magic numbers / strings.
+    - **Minor** — follow-up: minor wording, micro-optimizations, "could be split further" suggestions.
 
     Acknowledge what's well-structured. Maintainability work that's done well deserves naming.
 
@@ -145,13 +142,13 @@ Task tool (general-purpose):
 
     ### Issues
 
-    #### High (Blocks Merge)
-    [Quality bar violations, layering breaks, contract drift, ADR-required decisions undocumented]
+    #### Critical (Blocks Merge)
+    [Quality bar violations, layering breaks, contract drift]
 
-    #### Medium (Should Fix Before Merge)
-    [Naming drift, missing docs, debt markers, magic numbers/strings]
+    #### Important (Fix Before Proceeding)
+    [Naming drift, unrecorded decisions, required docs missing, debt markers, magic numbers/strings]
 
-    #### Low (Record for Follow-up)
+    #### Minor (Follow-up)
     [Polish, minor structural improvements]
 
     For each issue:
@@ -172,14 +169,12 @@ Task tool (general-purpose):
     ## Critical Rules
 
     **DO:**
-    - Categorize by maintainability impact (High/Medium/Low — different from code-review severity)
     - Be specific (file:line, not vague)
     - Reference the project's quality bar verbatim when flagging violations
-    - Acknowledge well-structured work
 
     **DON'T:**
     - Re-flag issues `code-reviewer.md` already caught (focus on what code review misses)
-    - Mark stylistic preferences as High
+    - Mark stylistic preferences as Critical
     - Demand patterns the project doesn't enforce
     - Conflate "I'd write it differently" with "this is a maintainability problem"
 ```
@@ -188,11 +183,11 @@ Task tool (general-purpose):
 
 - `{DESCRIPTION}` — brief summary of what the PR built
 - `{PLAN_OR_REQUIREMENTS}` — the plan / spec section the PR implements
-- `{QUALITY_BAR}` — the project's quality-bar text (e.g., Polis-bar §3.1 + concrete enforcement §3.3); lift verbatim
+- `{QUALITY_BAR}` — the project's quality-bar text (the spec's quality section, or the repo's coding rules); lift verbatim
 - `{BASE_SHA}` — sub-branch's base (typically the feature branch's HEAD when the sub-branch was created)
 - `{HEAD_SHA}` — sub-branch's HEAD
 
-**Reviewer returns:** Structural Health summary, Strengths, Issues (High / Medium / Low), Recommendations, Assessment.
+**Reviewer returns:** Structural Health summary, Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment.
 
 ## When to use
 
@@ -204,8 +199,5 @@ Task tool (general-purpose):
 
 | Code review | Maintainability review |
 |---|---|
-| Plan alignment, AC coverage, contract integrity, code quality, architecture, production readiness | Structural consistency, public/internal API discipline, naming consistency, dead code / debt, ADR debt, cross-component drift |
+| Plan alignment, AC coverage, contract integrity, code quality, architecture, production readiness | Structural consistency, public/internal API discipline, naming consistency, dead code / debt, decision records, cross-component drift |
 | "Does this PR do the right thing correctly?" | "Will this PR still be tractable to live with in 6 months?" |
-| Severity: Critical / Important / Minor | Severity: High / Medium / Low |
-
-Run them in sequence (code review first, maintainability review second) so the maintainability reviewer sees the post-code-review state. Don't run them in parallel — code-review fixes can resolve some maintainability concerns and create others.

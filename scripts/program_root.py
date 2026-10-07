@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""Where is the programme? — the one answer every script here shares.
+"""Where is the programme? The one answer every script here shares.
 
-These scripts used to live inside the programme's own repo, so each worked out
-its location from `__file__`. In the plugin they do not, so location becomes a
-parameter (spec §1 C2, HC-2: no script may contain a Foundry-specific path).
-
-Two DIFFERENT things were both called "root" in the originals, and conflating
-them is the easy mistake:
+Two different locations; don't conflate them:
 
   PROGRAM_ROOT  the programme's repo            e.g. /path/to/your-product
   PROGRAM_DIR   where its state lives           e.g. <root>/.handover
@@ -14,16 +9,14 @@ them is the easy mistake:
 Resolution order, first hit wins:
   1. an explicit argument passed by the caller
   2. $PROGRAM_ROOT / $PROGRAM_DIR
-  3. program.yaml, via the reader A2 ships
+  3. program.yaml, via program_yaml.py
   4. fail loudly — never a guess, because a wrong root reads a stranger's mailbox
 """
 import os
 import sys
 from pathlib import Path
 
-# The programme state directory's NAME is a convention, not a path, and it is
-# overridable via $PROGRAM_DIR. It is the one literal HC-2 tolerates, because a
-# convention every programme shares is not a Foundry-specific path.
+# A shared naming convention, overridable via $PROGRAM_DIR; no script may hold a programme-specific path.
 DEFAULT_DIRNAME = ".hand" + "over"
 
 
@@ -64,10 +57,7 @@ def program_root(arg=None):
 def program_transcripts(arg=None):
     """Where Claude keeps this programme's session transcripts.
 
-    🔴 Was a hard-coded absolute string in ws-pulse.py and ws-pulse-delta.py —
-    Foundry-specific AND user-specific, so it broke twice over on anyone else's
-    machine. It is DERIVED, not configured: Claude encodes the repo path by
-    replacing "/" and "_" with "-", so the root already determines it.
+    Derived from the root: Claude names the directory by replacing "/" and "_" in the repo path with "-".
     """
     root = program_root(arg)
     return str(Path.home() / ".claude" / "projects" / root.replace("/", "-").replace("_", "-"))
