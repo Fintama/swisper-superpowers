@@ -117,7 +117,10 @@ Task tool (general-purpose):
     ## Calibration
 
     Categorize issues by actual severity; not everything is Critical. The
-    maintainability reviewer uses the same scale.
+    maintainability reviewer uses the same scale. Only a real defect is
+    Critical or Important: a wrong figure, a broken contract, a security
+    hole, or a breach of a project rule. Style, naming and preferences are
+    Minor: a comment, never a block.
     Acknowledge what was done well before listing issues: accurate praise
     helps the implementer trust the rest of the feedback.
 

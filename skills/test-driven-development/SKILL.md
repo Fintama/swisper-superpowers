@@ -227,15 +227,21 @@ Every bug fix comes with its test. See `swisper-superpowers:systematic-debugging
 
 A suite that runs slowly gets run rarely. Fewer, higher-altitude tests (R1–R4) are the first fix; test tiers are the second. What the loop runs is in Verify GREEN above.
 
-**Assign every test a tier when you create it** (the selector is project-defined; Foundry: `*.extended.test.ts` suffix, `tests/core.txt` manifest; see `backend/tests/TIERS.md`):
+**Thorough while building, curated at PR time.** Write every test the task needs while implementing; that is TDD doing its job. Being in the branch does not earn a test a place in the PR CI run. The selector is project-defined (Foundry: `*.extended.test.ts` suffix, `tests/core.txt` manifest; see `backend/tests/TIERS.md`).
 
-| Tier | What goes here | Runs |
+**The curation step: at PR time every new test gets exactly one outcome.**
+
+| Outcome | What qualifies | Runs |
 |---|---|---|
-| **core** | A *small* set of fast tests guarding "is the app fundamentally broken" | Inner loop, constantly |
-| **gate** | Default. The AC, invariant and failure-mode tests | Required CI check |
-| **extended** | Genuinely slow and not needed on every PR (long boot-to-e2e flows) | Non-blocking lane (main / nightly) |
+| **PR CI** | a user promise asserted at its altitude · a contract between services · a money or figure invariant · a security property | Required check on every PR |
+| **after-merge / nightly** | slow, end-to-end, or breadth that rarely fails (long boot-to-e2e flows, wide matrices) | Non-blocking lane (main / nightly) |
+| **delete** | pins an implementation detail · existed only to kill a mutant or a deliberate break · asserts fixed wording or copy | Nowhere: deleted in this PR |
 
-Keep core small; if everything is core, nothing is.
+"Keep it, just in case" is not an outcome. Record the three counts in the PR report beside added / strengthened / deleted (R7).
+
+**PR CI has a time budget (~10 min)** and a small, named **core** smoke set: the few fast tests that say "the app is fundamentally broken". A new test that does not fit the budget means something leaves: moved to nightly or deleted, named in the PR. Keep core small; if everything is core, nothing is.
+
+**PR CI includes the cheap unit set.** Reds have to show before merge, not after; a fast test kept out of PR CI comes back as a post-merge fix PR.
 
 ## Test isolation and flakes (binding)
 
@@ -264,6 +270,7 @@ Which tool per language (Vitest, Playwright, pytest, fast-check, Stryker, Pact, 
 - [ ] Every unit test is an R3 exception: table or property, not N copies
 - [ ] Findings and mutants fixed by strengthening first; new tests only where no test sat at the right altitude
 - [ ] Lower tests made redundant by this change are deleted; report states added / strengthened / deleted / net
+- [ ] At PR time every new test is curated: PR CI, after-merge/nightly, or deleted; PR CI still fits its ~10 min budget
 - [ ] Watched each test fail for the expected reason; failing-test commit precedes passing-test commit
 - [ ] Every documented failure mode has one boundary test; every listed invariant a property test
 - [ ] Frontend touched → real-browser front-to-back test for the business AC

@@ -127,8 +127,8 @@ Task tool (general-purpose):
     Use the same scale as `code-reviewer.md`, judged by impact on long-term maintainability:
 
     - **Critical** — blocks merge: violates the project quality bar (file > size cap, complexity > cap, an untyped escape hatch the bar prohibits), layering violation, contract drift.
-    - **Important** — fix before proceeding: naming drift, an unrecorded decision (Part 5), docs the project requires but the diff lacks, debt markers without a Jira key, magic numbers / strings.
-    - **Minor** — follow-up: minor wording, micro-optimizations, "could be split further" suggestions.
+    - **Important** — fix before proceeding: a breach of a project rule — an unrecorded decision (Part 5), docs the project requires but the diff lacks, debt markers without a Jira key.
+    - **Minor** — a PR comment, never a block: naming drift, magic numbers / strings, minor wording, micro-optimizations, "could be split further" suggestions.
 
     Acknowledge what's well-structured. Maintainability work that's done well deserves naming.
 

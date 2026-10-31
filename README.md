@@ -59,8 +59,8 @@ reaping (`scripts/reap-ghosts.sh`).
 
 **1 · A claim is not a measurement.** A recorded fix, a green gate, a "sent"
 message — all are claims until measured against the source of truth.
-Positive-control anything that gates: break it on purpose, watch the expected
-red, restore it.
+Positive-control a gate once, when it is created or changed: break it on
+purpose, watch the expected red, restore it.
 
 **2 · An empty grep is evidence about the pattern, not about absence.** Widen
 the pattern before concluding something is missing. A code comment is a lead,

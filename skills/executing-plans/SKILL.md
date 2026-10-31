@@ -88,7 +88,7 @@ Then walk the plan's merge gate for this PR and tick each box; an unticked or un
 
 ### 2.4 PR-boundary review
 
-Run SDD's "PR-boundary review": the goal check if this PR first delivers a goal, then the code review (`requesting-code-review/code-reviewer.md`) and the maintainability review (`requesting-code-review/maintainability-reviewer.md`) in sequence, and `update-documentation` where the repo has an architecture site. Apply the findings it names before proceeding. If a reviewer is wrong, push back with technical reasoning per `swisper-superpowers:receiving-code-review`. A green merge gate does not replace the review: the gate is automated checks; the review catches what automation can't.
+Run SDD's "PR-boundary review": the goal check if this PR first delivers a goal, then one review verdict once CI is green (`requesting-code-review/code-reviewer.md`, with `maintainability-reviewer.md` as its second checklist), and `update-documentation` on the wave's last PR where the repo has an architecture site. Apply the real defects it names before proceeding; nits stay comments. If a reviewer is wrong, push back with technical reasoning per `swisper-superpowers:receiving-code-review`. A green merge gate does not replace the review: the gate is automated checks; the review catches what automation can't.
 
 ### 2.5 Suggest merge; don't auto-merge
 

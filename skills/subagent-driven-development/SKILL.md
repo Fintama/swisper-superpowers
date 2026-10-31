@@ -64,7 +64,7 @@ digraph process {
     "Base green and graded by CI?" [shape=diamond];
     "Task zero, or a different base (tell your human partner which)" [shape=box];
     "More tasks remain in this PR?" [shape=diamond];
-    "PR boundary: goal check, merge gate, code + maintainability review" [shape=box];
+    "PR boundary: goal check, merge gate, one review verdict once CI is green" [shape=box];
     "More PRs remain?" [shape=diamond];
     "Final whole-branch code review (multi-PR plans only)" [shape=box];
     "Use swisper-superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
@@ -90,8 +90,8 @@ digraph process {
     "Scoped re-review (./re-review-prompt.md)" -> "Approved?";
     "Mark task complete in TodoWrite" -> "More tasks remain in this PR?";
     "More tasks remain in this PR?" -> "Dispatch implementer (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain in this PR?" -> "PR boundary: goal check, merge gate, code + maintainability review" [label="no"];
-    "PR boundary: goal check, merge gate, code + maintainability review" -> "More PRs remain?";
+    "More tasks remain in this PR?" -> "PR boundary: goal check, merge gate, one review verdict once CI is green" [label="no"];
+    "PR boundary: goal check, merge gate, one review verdict once CI is green" -> "More PRs remain?";
     "More PRs remain?" -> "Dispatch implementer (./implementer-prompt.md)" [label="yes - next sub-branch"];
     "More PRs remain?" -> "Final whole-branch code review (multi-PR plans only)" [label="no"];
     "Final whole-branch code review (multi-PR plans only)" -> "Use swisper-superpowers:finishing-a-development-branch";
@@ -171,16 +171,17 @@ One code-quality review per task is the default; there is no per-task spec revie
 | Task shape | Per-task review |
 |---|---|
 | **Declarative / mechanical**: a schema table, a config entry, a generated migration, a mechanical rename. The diff is checkable by reading. | One code-quality review. |
-| **Logic / contract**: branches, thresholds, ordering, a public contract others consume, or a rule the spec argues about. | One code-quality review. The implementer positive-controls its gates and mutates **the one property the task exists to protect** (one or two mutations, not a sweep). **The reviewer runs the sweep** (below). |
+| **Logic**: branches, thresholds, ordering, a rule the spec argues about. | One code-quality review. The implementer mutates **the one property the task exists to protect** (one or two mutations, not a sweep). No reviewer sweep. |
+| **Money / figure / contract**: the code computes a price, an amount or a figure a user reads, or is a public contract others consume. | As logic, plus **the reviewer runs the sweep** (below). |
 | **User-visible surface** | One code-quality review **plus the render gate** against the scaffold. Never reduce this one. |
 
 ### Who mutates
 
 Three things get called "mutation testing":
 
-1. **Positive-control a gate**: break what it checks, watch it go red, restore. One or two, seconds each, at every tier. It catches the gate that cannot fail.
+1. **Positive-control a gate**: break what it checks, watch it go red, restore. Once, when the gate is created or changed (`verification-before-completion`), not on every task. It catches the gate that cannot fail.
 2. **Prove a carried or retargeted test still guards**: when a test moves onto a new component, break the behaviour it guards and watch it redden against the new target. A carried test that cannot fail is not worth carrying.
-3. **A sweep of N mutants over fresh code**: the reviewer's job, at logic/contract tier only, because an author mutating its own code picks the mutations it already wrote tests for. The reviewer runs it in its own worktree checked out at the task's HEAD, so it stays a reader of the implementer's tree. A survivor is reported as "strengthen `<existing test>` so this mutant dies", never "add a test".
+3. **A sweep of N mutants over fresh code**: the reviewer's job, at money / figure / contract tier only (a general logic task does not get one), because an author mutating its own code picks the mutations it already wrote tests for. The reviewer runs it in its own worktree checked out at the task's HEAD, so it stays a reader of the implementer's tree. A survivor is reported as "strengthen `<existing test>` so this mutant dies", never "add a test".
 
 If quality drops after this split, put the sweep back on the implementer and say so.
 
@@ -269,9 +270,11 @@ Never ignore an escalation or make the same model retry without a change.
 
 ## The fix loop: bounded, with a breaker
 
+**A blocking finding is a real defect**: a wrong figure, a broken contract, a security hole, or a breach of a project rule (the repo's `AGENTS.md` / coding rules, a missing or mis-levelled AC test). Anything else (naming, style, "could be cleaner", a preference) is a nit: Minor, a comment, never a block, whatever severity the reviewer gave it.
+
 Two routes leave the loop immediately:
 
-- **Minor findings never enter it.** Record them in the ledger as you go (`Task <N>: minor (deferred): <one-liner>`) and point the final whole-branch review at that list.
+- **Minor findings and nits never enter it.** Record them in the ledger as you go (`Task <N>: minor (deferred): <one-liner>`) and point the final whole-branch review at that list.
 - **A plan-mandated finding is the human's call.** If a finding conflicts with what the plan requires, present the finding *and* the plan text and ask which governs. Don't dismiss the finding because the plan mandates it, and don't dispatch a fix that contradicts the plan without asking. A discovery that the spec is wrong is a spec bug: take it upstream.
 
 Everything else enters. One round = one fix dispatch + at most one scoped re-review. **Three rounds maximum per task.**
@@ -334,12 +337,9 @@ For a multi-PR plan, organise the per-task loop by PR:
 
 **Then the merge gate.** Run the local gates once and push; CI's run on the head SHA is the binding suite result (Rule 1). Walk the plan's merge gate for this PR; every box is green before you suggest merge.
 
-**Then two reviews, in sequence** (maintainability benefits from seeing the code-review findings):
+**Then one review verdict for the PR, given once CI is green on the head SHA.** Not a preview review before CI and a full one after, and not a code review followed by a separate maintainability review: one reviewer, one dispatch, one verdict. It uses `swisper-superpowers:requesting-code-review` (`code-reviewer.md`, with `maintainability-reviewer.md` as its second checklist) over the PR range, and checks plan/spec alignment, AC coverage at promise altitude, the test list (`trace-check.sh` over the range quoted, net growth explained, each new test curated per `test-driven-development`), contracts exercised across the consumer boundary, front-to-back browser tests where frontend was touched, and the project's structural rules. A PR `requesting-code-review` exempts (docs, tests, version bump, generated re-sync) merges on green CI without one.
 
-1. **Code review** with `swisper-superpowers:requesting-code-review` (`code-reviewer.md`) over the PR range. It checks plan/spec alignment, AC coverage at promise altitude, the test list (`trace-check.sh` over the range quoted, net growth explained), contracts exercised across the consumer boundary, and front-to-back browser tests where frontend was touched.
-2. **Maintainability review** with `requesting-code-review/maintainability-reviewer.md`: structure against the caps, API discipline, naming, dead code and debt markers, decision debt (the architecture page's "Why it is like this" block), cross-component drift.
-
-Apply both reviews' Critical and Important findings before proceeding; Minor findings go to the ledger for the final review. Then:
+Apply the verdict's real defects (the fix loop's definition) before proceeding; nits are left as PR comments and go to the ledger for the final review. A fix to a real defect gets the scoped re-review, not a second full verdict. Then:
 
 - Regenerate the shared files once, now (step 2 above). If the repo has `architecture/tools/impact.py`, run `swisper-superpowers:update-documentation` on the PR's diff, so no PR leaves the boundary with its architecture pages stale.
 - Mark the PR complete in the plan's decomposition table.
@@ -391,9 +391,10 @@ Implementer:
 
 [Ledger] Task 2 @ 3fd0e14: tsc 0 · lint 0 · touched-suite 8 green
 
-Reviewer: Important: magic number (100). T-AC-4 ("report every 100 items") is
-  asserted on 50 items only, so the test cannot fail on the interval.
+Reviewer: Important: T-AC-4 ("report every 100 items") is asserted on 50 items
+  only, so the test cannot fail on the interval.
   Important: `verify calls repair once` is a mock-call count naming no id: delete.
+  Minor (comment, not blocking): magic number (100).
 
 [Fix round 1/3, resume the same implementer]
 Implementer: Extracted PROGRESS_INTERVAL; strengthened T-AC-4 to repair 250 items and
@@ -410,9 +411,9 @@ GOAL CHECK — G-1: ran the CLI as an operator, saw progress every 100 items on 
   1,000-item repair. The beneficiary can do the thing.
 [Local gates once, then push] tsc 0 · tsc -p tsconfig.test.json 0 · lint 0 · complexity 239/239
 [CI on 9c2e1a4, the binding run] 251 green
-[Merge gate walked; dispatch PR code review, then maintainability review]
+[Merge gate walked, CI green; dispatch the one PR review]
 trace-check origin/feature...HEAD: 9 added, 4 removed (net +5) · 9 traced · 0 untraced
-Reviewers: all ACs covered by AC-named tests at the boundary, contracts exercised by
+Reviewer: all ACs covered by AC-named tests at the boundary, contracts exercised by
   a consumer, net +5 explained (5 ACs, no shadows). Ready to merge.
 ```
 

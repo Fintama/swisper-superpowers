@@ -11,7 +11,7 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 
 ## When to Request Review
 
-**Always**, including when the change seems simple:
+**For every code change**, including when it seems simple:
 - After each task in subagent-driven development (executing-plans: after each task or at natural checkpoints)
 - After completing a major feature
 - Before merge to main
@@ -20,6 +20,10 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 - When stuck (fresh perspective)
 - Before refactoring (baseline check)
 - After fixing a complex bug
+
+**No review needed** for a PR that is only docs, only tests, a version bump, or a re-sync of generated files (OpenAPI spec, lockfile, a regenerated client). Merge it on green CI. A PR that mixes one of these with a code change is a code PR and gets its review.
+
+**One verdict per PR, once CI is green.** No preview review before CI followed by a full one after.
 
 ## The automated PR reviewer — at the FIRST push, not after green
 
@@ -49,17 +53,17 @@ Use Task tool with `general-purpose` type. Reviewer evaluates plan alignment, AC
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
 
-**3. After code review feedback is applied, dispatch maintainability reviewer subagent (template at `maintainability-reviewer.md`):**
+**3. At a PR boundary, the same reviewer also walks `maintainability-reviewer.md`:**
 
-Run it after code review, not in parallel: code-review fixes resolve some maintainability concerns and create others. Reviewer evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, Comments in the wrong home (per `test-driven-development/clean-code.md`), unrecorded decisions, cross-component drift.
+One dispatch, one verdict: hand the reviewer both templates rather than running a second review after the first. The maintainability checklist evaluates structural consistency, public/internal API discipline, naming consistency, dead code / debt markers, Comments in the wrong home (per `test-driven-development/clean-code.md`), unrecorded decisions, cross-component drift.
 
 **Additional placeholder for maintainability-reviewer.md:**
 - `{QUALITY_BAR}` - The project's quality-bar text, lifted verbatim (the spec's quality section, or the repo's coding rules such as `.cursor/rules/`)
 
-**4. Act on feedback.** Both reviewers use one scale:
-- Critical: fix immediately; blocks merge
-- Important: fix before proceeding
-- Minor: note for follow-up (a Jira ticket when it is real debt)
+**4. Act on feedback.** Both checklists use one scale, and **only a real defect blocks**: a wrong figure, a broken contract, a security hole, or a breach of a project rule (the repo's `AGENTS.md` / coding rules, a missing AC test):
+- Critical: a real defect that breaks users, money or data; fix immediately, blocks merge
+- Important: any other real defect; fix before proceeding
+- Minor: everything else (naming, style, preferences); a PR comment, never a block (a Jira ticket when it is real debt)
 - Reviewer wrong? Push back with technical reasoning, show the code or tests that prove it works, or ask for clarification (`swisper-superpowers:receiving-code-review`)
 
 ## Example

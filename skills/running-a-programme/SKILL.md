@@ -122,6 +122,26 @@ A proven goal is never held for an unfinished one.
 
 ---
 
+## Keep the process lean
+
+Testing and reviewing for their own sake cost the programme days and catch nothing.
+Every step you add has to earn its place against a defect.
+
+- **No gate without a named defect it catches** that CI plus one review would not.
+  Can't name one → don't add it, for a lane or for yourself.
+- **Rig and environment moves use the standing tools only**: the refresh and deploy
+  commands the programme already has. No per-move proof scripts, no control
+  batteries; if a standing tool is wrong, fix the tool once.
+- **No quiet windows and no invented gates.** A waiting period, a soak or a hold
+  that no one asked for and no measured failure motivates is not a safeguard; it
+  is delay.
+- **Ask the human only for decisions.** A status, a confirmation of something you
+  can check, or a "shall I continue" is not a decision; check it or do it.
+- **The version bump rides in the wave's last PR**, with its CHANGELOG and
+  architecture pages, never as a PR of its own per merge.
+
+---
+
 ## Keeping lanes from colliding
 
 - **Two lanes editing one path.** Owned paths are in `program.yaml` and must not

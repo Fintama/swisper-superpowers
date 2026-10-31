@@ -201,7 +201,7 @@ Heavy contention is a design signal: if three PRs must serialise on one file, th
 ### Required: waves, freeze points, and the migration slot
 
 - **One PR per wave.** The wave's tasks run in parallel, each in its own worktree and reviewed per task; they merge locally into one wave branch (`--no-ff`, keeping the reviewed history) and CI runs once per wave. Split into separate PRs only when an item must ship to main on its own or needs a different approver. Contention and `must_not_edit` then apply between the wave's tasks.
-- **Generated and shared files: once, at the end of the wave PR.** The regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and architecture pages per `update-documentation` are the wave's last task: never per task, per fix round or in parallel branches, because they conflict on every combine.
+- **Generated and shared files: once, at the end of the wave PR.** The regenerated OpenAPI spec and its changelog, package CHANGELOGs, version bumps, and architecture pages per `update-documentation` are the wave's last task (the wave's last PR, when a wave is split): never per task, per sub-PR, per fix round or in parallel branches, because they conflict on every combine.
 - **Every wave states why its tasks are safe together**, in one line naming the fact ("disjoint owned files; both consume the response shape frozen in wave 1").
 - **Every dependency the spec marks stubbable gets a freeze point**: the contract is published before the wave that stubs against it, so "B needs A" becomes two PRs running at once. If the spec did not say, assume not stubbable and raise it.
 - **One exclusive migration slot per release**, ordered against the PRs that need it. Two PRs writing migrations in one window collide on numbering at merge time.
@@ -221,26 +221,23 @@ The value check outranks these four: a PR can pass all of them and still deliver
 
 ### Per-PR merge gate
 
-Each PR's task group ends with its merge gate, declared in the plan. A sub-PR is not marked complete or suggested for merge into the feature branch until every line is green:
+Each PR's task group ends with its merge gate, declared in the plan. It is three lines; don't add more. A sub-PR is not marked complete or suggested for merge into the feature branch until every line is green:
 
 ```md
 ### PR-K merge gate
 
 Before suggesting merge of `<sub-branch>` into the feature branch:
 
-- [ ] Every AC the PR claims (column "ACs verified") has a green test
-- [ ] Tests are named after the AC ID (`test('T-AC-9: …', …)` / `test('B-AC-1: …', …)`)
-- [ ] Tests precede implementation in commit history (the failing-test commit comes first)
-- [ ] Every contract the PR produces is exercised by a test on the consumer side, not only by the producer's unit tests
-- [ ] If the PR changes frontend behaviour: a front-to-back browser test drives the change from the UI and asserts the back-end effect
-- [ ] No new `@ts-ignore` / `eslint-disable` without a reason on the same line
-- [ ] The project's quality-bar gates (typecheck, lint, coverage, property tests, benchmarks the spec sets) are green on the sub-branch
-- [ ] A non-obvious decision is recorded in the "Why it is like this" block of the architecture page it shaped (date · decision · rejected alternatives · spec link)
-- [ ] CHANGELOG.md updated for any user-facing change
-- [ ] If the repo has `architecture/tools/impact.py`: `update-documentation` run, each page the diff touches updated or re-verified, `make architecture-check` green
+- [ ] CI green on the head SHA (the project's quality-bar gates run there)
+- [ ] One review verdict, where the PR's risk calls for one (`requesting-code-review` names the PRs that need none)
+- [ ] Every AC the PR claims (column "ACs verified") has a green test named after its AC / requirement id (`test('T-AC-9: …', …)` / `test('B-AC-1: …', …)`)
 
 Only then: mark the PR complete and suggest merge into the feature branch.
 ```
+
+What used to be extra gate lines is the reviewer's checklist (`code-reviewer.md`), not the plan's: tests before implementation in history, consumer-side contract tests, front-to-back browser tests, escape hatches with reasons.
+
+**CHANGELOG, architecture pages and the version bump ride in the wave's last PR**, not in every sub-PR (with one PR per wave, its last task). That PR's gate adds one line: CHANGELOG updated for user-facing changes, the version bumped, and, if the repo has `architecture/tools/impact.py`, `update-documentation` run with `make architecture-check` green and each non-obvious decision in the "Why it is like this" block of the page it shaped.
 
 "Suggest merge" is deliberate: the planner does not merge. The implementer or reviewer makes the call once the gate is green, unless project policy lets review tooling auto-merge after it. A merge to main always needs the human's explicit OK.
 
@@ -389,7 +386,7 @@ At each phase boundary, insert a gate task that verifies the phase's exit criter
   - [ ] benchmarks within the spec's tolerance of baseline
 - [ ] Non-obvious P[N] decisions recorded in the "Why it is like this" block
 - [ ] No new `@ts-ignore` or file-level `eslint-disable` without a reason on the same line
-- [ ] CHANGELOG.md updated for user-facing changes
+- [ ] CHANGELOG.md updated for user-facing changes (when this phase ends a wave)
 ````
 
 ## Spike Tasks
@@ -445,7 +442,7 @@ Run it unpiped and read the exit code of the bare command: a pipe returns the la
 <!-- plan-check: no-task C9 C10 — Phase 2, spec §7 -->
 ```
 
-Positive-control it before you trust it: delete the task for one change ID, watch it go red, restore it.
+Positive-control it once, when `plan-check.sh` itself is created or changed (delete the task for one change ID, watch it go red, restore it), not on every plan (`verification-before-completion`).
 
 **2. Delivery order.** Read down "First delivered in" and confirm the PR-1 relationship to §0.1 is stated and honest (see "Sequence by value"). A goal first delivered after PR-2 is acceptable only when the plan states the reason: a real dependency forces the order, and each earlier PR is independently useful to a named beneficiary the moment it lands. What fails this check is a plan in which nobody sees anything until the end.
 

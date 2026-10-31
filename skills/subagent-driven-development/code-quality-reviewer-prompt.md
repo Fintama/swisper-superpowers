@@ -10,7 +10,7 @@ Task tool (general-purpose):
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]
   BASE_SHA: [commit before task]
   HEAD_SHA: [current commit]
-  TIER: [declarative | logic/contract | user-visible — assigned at extraction]
+  TIER: [declarative | logic | money/figure/contract | user-visible — assigned at extraction]
   GATES: [the ledger line recorded for HEAD_SHA — read it; don't re-run the suite]
 ```
 
@@ -26,7 +26,7 @@ Task tool (general-purpose):
 - **Against the plan:** every test the plan names for this task exists, at its altitude. A missing AC test is Important.
 - **Untraced or mechanism-only tests are Important findings:** a title with no AC / INV / FM id; a unit test re-proving what a boundary test already proves; mock-call counts, constants, `typeof`, source greps, "stays removed". Run `trace-check.sh <BASE_SHA>..<HEAD_SHA>` and cite its UNTRACED lines.
 - **Disposition is *strengthen* or *delete*;** "keep" is not available for an untraced test. A gap you find (or a mutant that survives) goes back as "strengthen `<test>` so it fails on X". Request a new test only when no test sits at the right altitude, and name the id it proves.
-- **At logic/contract tier, run the mutation sweep** on the property the task protects, in your own worktree checked out at HEAD_SHA (never in the implementer's tree). Report each survivor as "strengthen `<test>` so this mutant dies".
+- **At money / figure / contract tier only, run the mutation sweep** (a general logic task gets none) on the property the task protects, in your own worktree checked out at HEAD_SHA (never in the implementer's tree). Report each survivor as "strengthen `<test>` so this mutant dies".
 - **Never praise a count.** "18 tests" is not a strength; "each AC proved at the route" is.
 
 **Use prism for these checks** (indexed repos; Grep/Glob are blocked there; `prism --help`): `prism outline <file>` to judge single responsibility, `prism module-map <dir>` to compare structure against the plan, and `prism check "<intent>"` / `prism search "<concept>"` to catch functionality that duplicates something already in the repo. The full prism workflow is in `code-reviewer.md`.
