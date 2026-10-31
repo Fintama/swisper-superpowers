@@ -442,7 +442,7 @@ Run it unpiped and read the exit code of the bare command: a pipe returns the la
 <!-- plan-check: no-task C9 C10 — Phase 2, spec §7 -->
 ```
 
-Positive-control it before you trust it: delete the task for one change ID, watch it go red, restore it.
+Positive-control it once, when `plan-check.sh` itself is created or changed (delete the task for one change ID, watch it go red, restore it), not on every plan (`verification-before-completion`).
 
 **2. Delivery order.** Read down "First delivered in" and confirm the PR-1 relationship to §0.1 is stated and honest (see "Sequence by value"). A goal first delivered after PR-2 is acceptable only when the plan states the reason: a real dependency forces the order, and each earlier PR is independently useful to a named beneficiary the moment it lands. What fails this check is a plan in which nobody sees anything until the end.
 
