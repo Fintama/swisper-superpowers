@@ -41,6 +41,7 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `running-a-programme` | `Rule on the property, not the mechanism` | The PM states what must be true plus a failing test; the lane picks the mechanism, and a named mechanism is probed first. Measured 2026-10-05: three unprobed mechanism rulings were wrong, each a fix round plus a re-review. |
 | `running-a-programme` | `Ship to main by value` | A proven goal goes to main at once, never held behind an unfinished one. Measured 2026-10-05: goal 1 was proven hours before any of it could reach main. |
 | `creating-screen-mocks` | `isTrusted` | `select-client` ignores scripted clicks so automation cannot clobber the reviewer's selection — and an agent that tries one sees nothing and debugs working code. Documented where it is met, not only inside the file. |
+| `running-a-programme` | `Keep the process lean` | Heiko, 2026-10-31: *"we are overdoing it with testing and reviewing … good example was the invented quiet period of 20 min."* PM rules: no gate without a named defect; rig moves use the standing tools only; no quiet windows or invented gates; ask the human only for decisions; the version bump rides in the wave's last PR. |
 
 ## Skills we substantially extended
 
@@ -57,7 +58,7 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `test-driven-development` | `AC-ID test naming` | A test names the criterion it proves, so coverage is greppable. |
 | `test-driven-development` | `proving-acs` | A test is asserted at **promise** altitude — what the user receives. Since 2026-10-05 the method for every test, not only B-ACs. |
 | `test-driven-development` | `Functional Core, Imperative Shell` | The design rule that makes tests possible instead of a fight. |
-| `test-driven-development` | `test tiers` | core / gate / extended, so the inner loop stays fast enough to be used. |
+| `test-driven-development` | `test tiers` | A small core smoke set for the inner loop; since 1.12.0 the rest is decided by the curation step below, not by a "gate is the default" tier. |
 | `test-driven-development` | `Tests prove promises` | R1–R7 (Heiko, 2026-10-05: "I don't want useless tests"): every test names its AC / INV / FM id or is not written; unit tests are the exception; boundary first, **replacing the test pyramid**; strengthen before add; delete what a higher test covers. Measured: Foundry main ~21,500 tests, ~18% naming an AC; a baseline agent wrote 11 untraced unit tests beside 7 route tests for one route. |
 | `test-driven-development` | `trace-check.sh` | R8 — the mechanical half of the naming rule: lists new tests whose title names no id, exits 1; `--self-test` is its positive control. The file is checked as well as the prose. |
 | `test-driven-development` | `clean-code.md` | Heiko, 2026-10-07: where each kind of information belongs. Docstring = contract, comment = non-obvious why, history → git/PR, rationale → architecture page, never-break rules → tests. **Do not match an over-commented neighbour.** Measured on helvetiq `gateways/llm/adapter.py` as it was before the 2026-10-05 model-layer cleanup: 49% docs, 83 spec ids, 35 🔴. A baseline implementer given such a file wrote review history, 🔴 and spec ids in error messages; with the file it wrote contracts only. The SKILL.md REFACTOR step and checklist point to it. |
@@ -72,7 +73,7 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `brainstorming` | `GRAFT TARGET` | The spec records which file the mock becomes, so the implementer adapts rather than rebuilds. |
 | `subagent-driven-development` | `render-gate.mjs` | Build-vs-mock compared mechanically, not by eye. |
 | `finishing-a-development-branch` | `Step 1b: Update the Documentation` | In a repo with an architecture site, `update-documentation` runs before any merge or PR is offered. |
-| `writing-plans` | `update-documentation` | Every per-PR merge gate carries the docs check, for repos with an architecture site. |
+| `writing-plans` | `update-documentation` | The wave's last PR carries the docs check, for repos with an architecture site (every per-PR gate until 1.12.0). |
 | `brainstorming` | `Swisper_Documentation` | Specs are saved in the Fintama docs home (`specs/<product>/`, main only, `tools/docs-save`), not `docs/superpowers/specs`. Ruled by Heiko 2026-10-04; an upstream merge restoring the old path would quietly scatter specs again. |
 | `writing-plans` | `Swisper_Documentation` | Plans are saved in `plans/<product>/` of the docs home, and deferred work goes to Jira, not a backlog section. Same ruling. |
 | `update-documentation` | `Why it is like this` | ADRs are dropped: a non-obvious decision is recorded on the architecture page it shaped. Technical debt goes to Jira with the finding number. Same ruling. |
@@ -90,7 +91,13 @@ Upstream has no version of these at all, so the whole skill is the divergence.
 | `test-driven-development` | `A junior tests` | The senior-engineer pass picks the tests before the first RED: promise altitude, negative path, the named limit, each dependency failing — mapped to R2 ids, never extra untraced tests. |
 | `brainstorming` | `junior would:` | §1's `senior` field: per change, what a junior would build and what the design does instead. It replaced the seam's "obvious alternative it beat" clause; self-review check 7 confirms the rest of the spec carries it. |
 | `finishing-a-development-branch` | `gh pr ready` | An existing draft from the first push is marked ready, not duplicated. |
-
+| `test-driven-development` | `curation step` | Heiko, 2026-10-31: *"thorough tests at the moment of implementing … but rigorous and efficient when deciding which of these tests make it to the CI and smoke test sets."* At PR time every new test gets one outcome: PR CI (promise at its altitude, service contract, money/figure invariant, security), after-merge/nightly, or delete. PR CI has a ~10 min budget and keeps the cheap unit set, so reds show before merge. |
+| `subagent-driven-development` | `one review verdict for the PR` | One reviewer, one dispatch, one verdict per PR, once CI is green; no preview + full pair, no separate maintainability pass. Heiko, 2026-10-31: *"we are overdoing it with testing and reviewing."* |
+| `subagent-driven-development` | `A blocking finding is a real defect` | Only a wrong figure, a broken contract, a security hole or a project-rule breach blocks; nits are comments. Same ruling. |
+| `subagent-driven-development` | `money / figure / contract tier` | The reviewer's mutant sweep runs only on money/figure/contract logic, not on every logic task. Same ruling. |
+| `requesting-code-review` | `No review needed` | Docs-only, tests-only, version bumps and generated-file re-syncs merge on green CI without a review. Same ruling. |
+| `verification-before-completion` | `Control a gate once` | A gate is positive-controlled when it is created or changed, not on every run; no new gate without a named defect CI plus one review would miss. Same ruling. |
+| `writing-plans` | `ride in the wave's last PR` | The per-PR merge gate is three lines (CI green · one review where risk calls for it · AC-named tests); CHANGELOG, architecture pages and the version bump move to the wave's last PR. Same ruling. |
 ## Rows deliberately NOT in this table
 
 Three candidates were rejected when this ledger was written, and they are recorded

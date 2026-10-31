@@ -61,7 +61,7 @@ pass on a7c31f9; the full suite has not run on it").
 
 ## Positive control
 
-**A check that cannot fail proves nothing.** Before you rely on a test, gate, lint or
+**A check that cannot fail proves nothing.** Before you first rely on a test, gate, lint or
 script to catch something: break it on purpose, run it, watch it go red for the expected
 reason, restore, watch it go green.
 
@@ -71,6 +71,13 @@ reason, restore, watch it go green.
   pattern) and see it report it; use its `--self-test` where it has one.
 - An empty result (no matches, 0 tests ran, skipped) is not green until you know the
   check ran on something: a filter that matches nothing passes silently.
+
+**Control a gate once: when it is created or changed.** A gate that was controlled and
+has not changed since does not need it again; don't re-control it on every run, task or
+PR. A test you just wrote is controlled by its own RED.
+
+**Don't build a new gate** (a script, a check, a control battery) unless you can name the
+defect it catches that CI plus one review would not. Can't name one → don't build it.
 
 ## When to apply
 

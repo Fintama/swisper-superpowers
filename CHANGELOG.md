@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-10-31
+
+### Changed
+- **Lean testing and review** (Heiko, 2026-10-31: "we are overdoing it with testing and reviewing … for
+  reviewing and testing sake without adding much value"; "thorough tests at the moment of implementing
+  for TDD … but rigorous and efficient when deciding which of these tests make it to the CI and smoke
+  test sets"). Approved by Heiko the same day.
+  - **test-driven-development:** "gate is the default tier" is replaced by a curation step at PR time.
+    Each new test goes to PR CI (a promise at its altitude, a service contract, a money/figure
+    invariant, security), to after-merge/nightly (slow, end-to-end, rarely-failing breadth), or is
+    deleted (implementation pins, mutant-only or break-only tests, fixed wording). PR CI has a
+    ~10 min budget and a small named smoke set, and keeps the cheap unit set so reds show before merge.
+  - **subagent-driven-development:** one review verdict per PR, once CI is green (no preview + full
+    pair, no separate maintainability pass); the reviewer's mutant sweep only at the new
+    money/figure/contract tier; only real defects block, nits are comments. `executing-plans`,
+    `code-quality-reviewer-prompt.md`, `code-reviewer.md` and `maintainability-reviewer.md` follow.
+  - **requesting-code-review:** no review for docs-only, tests-only, version-bump and generated-file
+    re-sync PRs; merge on green CI.
+  - **verification-before-completion:** a gate is positive-controlled once, when created or changed;
+    no new gate, script or control battery without a named defect CI plus one review would miss.
+  - **writing-plans:** the per-PR merge gate is three lines (CI green · one review where risk calls for
+    it · AC-named tests); CHANGELOG, architecture pages and the version bump ride in the wave's last PR.
+  - **running-a-programme:** new "Keep the process lean" section: no gate without a named defect,
+    standing tools only for rig moves, no quiet windows or invented gates, ask the human only for
+    decisions, version bump in the wave's last PR.
+
 ## [1.11.2] - 2026-10-07
 
 ### Changed
